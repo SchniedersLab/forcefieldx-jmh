@@ -20,4 +20,5 @@ target/
 .netbeans/
 .mvn/
 
-
+jitwatch*
+sandbox/

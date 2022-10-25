@@ -78,7 +78,7 @@ public class NumericsBenchmark {
   /**
    * Perform 5 test warm-up iterations
    */
-  private final static int warmUpIterations = 5;
+  private final static int warmUpIterations = 2;
   /**
    * Each warm-up iteration will run for this many seconds.
    */
@@ -86,7 +86,7 @@ public class NumericsBenchmark {
   /**
    * Perform 5 test measurement iterations
    */
-  private final static int measurementIterations = 5;
+  private final static int measurementIterations = 3;
   /**
    * Each measurement iteration will run for this many seconds.
    */
