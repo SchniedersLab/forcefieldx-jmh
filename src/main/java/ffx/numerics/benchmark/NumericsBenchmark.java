@@ -76,7 +76,7 @@ import org.openjdk.jmh.infra.Blackhole;
 public class NumericsBenchmark {
 
   /**
-   * Perform 5 test warm-up iterations
+   * Perform 2 test warm-up iterations
    */
   private final static int warmUpIterations = 2;
   /**
@@ -84,7 +84,7 @@ public class NumericsBenchmark {
    */
   private final static int warmupTime = 1;
   /**
-   * Perform 5 test measurement iterations
+   * Perform 3 test measurement iterations
    */
   private final static int measurementIterations = 3;
   /**
@@ -156,8 +156,9 @@ public class NumericsBenchmark {
     double[] Ti = new double[3];
     double[] Tk = new double[3];
     double gc = 2.455;
+    double Eh = 1.0;
     double Es = 78.3;
-    GKEnergyQI gkEnergyQI = new GKEnergyQI(gc, Es, true);
+    GKEnergyQI gkEnergyQI = new GKEnergyQI(Eh, Es, gc, true);
     PolarizableMultipole mI = new PolarizableMultipole(Qi, Ui, Ui);
     PolarizableMultipole mK = new PolarizableMultipole(Qk, Uk, Uk);
     QIFrame qiFrame = new QIFrame();

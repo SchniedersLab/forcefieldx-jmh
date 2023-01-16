@@ -8,7 +8,6 @@ import static jdk.incubator.vector.DoubleVector.zero;
 import static jdk.incubator.vector.VectorOperators.ADD;
 import static org.openjdk.jmh.annotations.Mode.AverageTime;
 
-import ffx.numerics.math.MatrixMath;
 import jdk.incubator.vector.DoubleVector;
 import jdk.incubator.vector.VectorSpecies;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -37,7 +36,7 @@ public class PanamaBenchmark {
    */
   private final static int measurementTime = 1;
 
-  private static final VectorSpecies SPECIES = DoubleVector.SPECIES_PREFERRED;
+  private static final VectorSpecies<Double> SPECIES = DoubleVector.SPECIES_PREFERRED;
 
   private static final int size = 2048;
   private static final double[] left = new double[size];
@@ -153,6 +152,8 @@ public class PanamaBenchmark {
   public double vectorfmaUnrolled4() {
     return vectorDot(left, right);
   }
+
+
 
   /**
    * Compute the dot product of vectors a and b.

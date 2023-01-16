@@ -22,3 +22,4 @@ target/
 
 jitwatch*
 sandbox/
+jmh-result.json
