@@ -73,7 +73,7 @@ import org.openjdk.jmh.infra.Blackhole;
  * NumericsBenchmark.gkTensorQI           avgt   25  1010.790 ± 28.696  ns/op
  * NumericsBenchmark.rotateFrame          avgt   25    69.300 ±  1.768  ns/op
  */
-public class NumericsBenchmark {
+public class MultipoleBenchmark {
 
   /**
    * Perform 2 test warm-up iterations
