@@ -41,7 +41,7 @@ public class ReductionBenchmark {
 
   private static final ParallelTeam parallelTeam = new ParallelTeam();
   private static final int nThreads = parallelTeam.getThreadCount();
-  private static final int size = 10000;
+  private static final int size = 50000;
 
   @State(Scope.Thread)
   public static class MultiState {
@@ -88,7 +88,7 @@ public class ReductionBenchmark {
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1)
   public void multiArrayReset(MultiState state, Blackhole blackhole) {
-    state.multiArray3D.reset(parallelTeam, 0, size -1);
+    state.multiArray3D.reset(parallelTeam);
     blackhole.consume(state.multiArray3D);
   }
 
@@ -99,7 +99,7 @@ public class ReductionBenchmark {
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1)
   public void pjArrayReset(MultiState state, Blackhole blackhole) {
-    state.pjArray3D.reset(parallelTeam, 0, size -1);
+    state.pjArray3D.reset(parallelTeam);
     blackhole.consume(state.pjArray3D);
   }
 
@@ -110,7 +110,7 @@ public class ReductionBenchmark {
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1)
   public void adderArrayReset(MultiState state, Blackhole blackhole) {
-    state.adderArray3D.reset(parallelTeam, 0, size -1);
+    state.adderArray3D.reset(parallelTeam);
     blackhole.consume(state.adderArray3D);
   }
 
@@ -121,7 +121,7 @@ public class ReductionBenchmark {
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1)
   public void multiArrayReduce(MultiState state, Blackhole blackhole) {
-    state.multiArray3D.reduce(parallelTeam, 0, size -1);
+    state.multiArray3D.reduce(parallelTeam);
     blackhole.consume(state.multiArray3D);
   }
 
@@ -132,7 +132,7 @@ public class ReductionBenchmark {
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1)
   public void pjArrayReduce(MultiState state, Blackhole blackhole) {
-    // state.pjArray3D.reduce(parallelTeam, 0, size -1);
+    state.pjArray3D.reduce(parallelTeam);
     blackhole.consume(state.pjArray3D);
   }
 
@@ -143,7 +143,7 @@ public class ReductionBenchmark {
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1)
   public void adderArrayReduce(MultiState state, Blackhole blackhole) {
-    // state.adderArray3D.reduce(parallelTeam, 0, size -1);
+    state.adderArray3D.reduce(parallelTeam);
     blackhole.consume(state.adderArray3D);
   }
 
