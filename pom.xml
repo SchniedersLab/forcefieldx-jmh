@@ -4,7 +4,7 @@
 
     <groupId>edu.uiowa.eng.ffx</groupId>
     <artifactId>ffx-jmh</artifactId>
-    <version>1.0.0-beta</version>
+    <version>1.0.0</version>
     <packaging>jar</packaging>
     <name>Force Field X JMH</name>
     <dependencies>
@@ -21,8 +21,8 @@
         </dependency>
         <dependency>
             <groupId>edu.uiowa.eng.ffx</groupId>
-            <artifactId>numerics</artifactId>
-            <version>1.0.0-beta</version>
+            <artifactId>ffx-numerics</artifactId>
+            <version>1.0.0</version>
         </dependency>
     </dependencies>
 
@@ -37,7 +37,7 @@
         <!--
             Java source/target to use for compilation.
           -->
-        <javac.target>17</javac.target>
+        <javac.target>21</javac.target>
 
         <!--
             Name of the benchmark Uber-JAR to generate.

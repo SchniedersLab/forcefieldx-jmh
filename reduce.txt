@@ -1,0 +1,43 @@
+1 Thread
+Benchmark                            Mode  Cnt        Score       Error  Units
+ReductionBenchmark.adderArrayReduce  avgt    5        0.887 ±     0.191  ns/op
+ReductionBenchmark.adderArrayReset   avgt    5  2065882.124 ± 78456.061  ns/op
+ReductionBenchmark.multiArrayReduce  avgt    5     8414.195 ±  1776.633  ns/op
+ReductionBenchmark.multiArrayReset   avgt    5    37377.375 ±  7740.696  ns/op
+ReductionBenchmark.pjArrayReduce     avgt    5        0.835 ±     0.090  ns/op
+ReductionBenchmark.pjArrayReset      avgt    5   946491.050 ± 94300.494  ns/op
+
+2 Threads
+Benchmark                            Mode  Cnt        Score        Error  Units
+ReductionBenchmark.adderArrayReduce  avgt    5        0.917 ±      0.168  ns/op
+ReductionBenchmark.adderArrayReset   avgt    5  1070180.326 ± 112916.125  ns/op
+ReductionBenchmark.multiArrayReduce  avgt    5    46062.118 ±   2174.127  ns/op
+ReductionBenchmark.multiArrayReset   avgt    5    51364.104 ±  11282.236  ns/op
+ReductionBenchmark.pjArrayReduce     avgt    5        0.912 ±      0.171  ns/op
+ReductionBenchmark.pjArrayReset      avgt    5   554803.938 ±  30343.983  ns/op
+
+4 Threads
+Benchmark                            Mode  Cnt        Score        Error  Units
+ReductionBenchmark.adderArrayReduce  avgt    5        0.896 ±      0.141  ns/op
+ReductionBenchmark.adderArrayReset   avgt    5   596888.562 ±  33121.899  ns/op
+ReductionBenchmark.multiArrayReduce  avgt    5    66592.480 ±   3012.018  ns/op
+ReductionBenchmark.multiArrayReset   avgt    5    62964.885 ±  13810.159  ns/op
+ReductionBenchmark.pjArrayReduce     avgt    5        0.917 ±      0.156  ns/op
+ReductionBenchmark.pjArrayReset      avgt    5   344894.791 ± 140487.268  ns/op
+
+8 Threads
+Benchmark                            Mode  Cnt        Score        Error  Units
+ReductionBenchmark.adderArrayReduce  avgt    5        0.921 ±      0.159  ns/op
+ReductionBenchmark.adderArrayReset   avgt    5   451640.310 ± 165969.807  ns/op
+ReductionBenchmark.multiArrayReduce  avgt    5   134831.910 ±  36707.455  ns/op
+ReductionBenchmark.multiArrayReset   avgt    5   229737.620 ± 238631.774  ns/op
+ReductionBenchmark.pjArrayReduce     avgt    5        0.929 ±      0.125  ns/op
+ReductionBenchmark.pjArrayReset      avgt    5   213946.945 ±  38503.191  ns/op
+
+12 Threads
+ReductionBenchmark.adderArrayReduce     avgt    5       0.512 ±      0.006  ns/op
+ReductionBenchmark.adderArrayReset      avgt    5  443959.386 ± 136872.747  ns/op
+ReductionBenchmark.multiArrayReduce     avgt    5  172809.321 ±   7240.594  ns/op
+ReductionBenchmark.multiArrayReset      avgt    5  161758.639 ±   2842.495  ns/op
+ReductionBenchmark.pjArrayReduce        avgt    5       0.525 ±      0.004  ns/op
+ReductionBenchmark.pjArrayReset         avgt    5  133069.589 ±   8742.355  ns/op

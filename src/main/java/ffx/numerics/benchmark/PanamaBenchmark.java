@@ -126,6 +126,23 @@ public class PanamaBenchmark {
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public double vectorWithMask() {
+    var sum = zero(SPECIES);
+    for (int i = 0; i < size; i += SPECIES.length()) {
+      var mask = SPECIES.indexInRange(i, size);
+      var l = fromArray(SPECIES, left, i, mask);
+      var r = fromArray(SPECIES, right, i, mask);
+      sum = l.mul(r, mask).add(sum, mask);
+    }
+    return sum.reduceLanes(ADD);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
   public double vectorUnrolled4() {
     var sum1 = zero(SPECIES);
     var sum2 = zero(SPECIES);
@@ -135,10 +152,8 @@ public class PanamaBenchmark {
     for (int i = 0; i < size; i += width * 4) {
       sum1 = fromArray(SPECIES, left, i).mul(fromArray(SPECIES, right, i)).add(sum1);
       sum2 = fromArray(SPECIES, left, i + width).mul(fromArray(SPECIES, right, i + width)).add(sum2);
-      sum3 = fromArray(SPECIES, left, i + width * 2).mul(fromArray(SPECIES, right, i + width * 2))
-          .add(sum3);
-      sum4 = fromArray(SPECIES, left, i + width * 3).mul(fromArray(SPECIES, right, i + width * 3))
-          .add(sum4);
+      sum3 = fromArray(SPECIES, left, i + width * 2).mul(fromArray(SPECIES, right, i + width * 2)).add(sum3);
+      sum4 = fromArray(SPECIES, left, i + width * 3).mul(fromArray(SPECIES, right, i + width * 3)).add(sum4);
     }
     return sum1.add(sum2).add(sum3).add(sum4).reduceLanes(ADD);
   }
