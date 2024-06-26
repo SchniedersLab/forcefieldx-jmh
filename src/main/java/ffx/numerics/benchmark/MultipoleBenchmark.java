@@ -31,16 +31,16 @@
 
 package ffx.numerics.benchmark;
 
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
-import static org.openjdk.jmh.annotations.Mode.AverageTime;
-
 import ffx.numerics.math.DoubleMath;
 import ffx.numerics.multipole.CoulombTensorGlobal;
+import ffx.numerics.multipole.CoulombTensorGlobalSIMD;
 import ffx.numerics.multipole.CoulombTensorQI;
+import ffx.numerics.multipole.CoulombTensorQISIMD;
 import ffx.numerics.multipole.GKEnergyGlobal;
 import ffx.numerics.multipole.GKEnergyQI;
 import ffx.numerics.multipole.PolarizableMultipole;
 import ffx.numerics.multipole.QIFrame;
+import jdk.incubator.vector.DoubleVector;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -50,6 +50,11 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
+
+import java.util.Arrays;
+
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import static org.openjdk.jmh.annotations.Mode.AverageTime;
 
 /**
  * JDK 11 Benchmark                              Mode  Cnt     Score    Error  Units
@@ -108,6 +113,25 @@ public class MultipoleBenchmark {
 
   protected final static double[] Ui = {0.04886563833303603, 0.0, -0.0018979726219775425};
   protected final static double[] Uk = {-0.040839567654139396, 0.0, -5.982126263609587E-4};
+
+  protected final static int vectorLength = DoubleVector.zero(DoubleVector.SPECIES_PREFERRED).length();
+  protected final static double[][] VQi = new double[10][vectorLength];
+  protected final static double[][] VQk = new double[10][vectorLength];
+  protected final static double[][] VUi = new double[3][vectorLength];
+  protected final static double[][] VUk = new double[3][vectorLength];
+  protected final static DoubleVector[] vR = new DoubleVector[3];
+
+  static {
+    for (int i = 0; i < 10; i++) {
+      Arrays.fill(VQi[i], Qi[i]);
+      Arrays.fill(VQk[i], Qk[i]);
+    }
+    for (int i = 0; i < 3; i++) {
+      Arrays.fill(VUi[i], Ui[i]);
+      Arrays.fill(VUk[i], Uk[i]);
+      vR[i] = DoubleVector.broadcast(DoubleVector.SPECIES_PREFERRED, r[i]);
+    }
+  }
 
   @State(Scope.Thread)
   public static class GlobalCoulombState {
@@ -175,12 +199,24 @@ public class MultipoleBenchmark {
     QIFrame qiFrame = new QIFrame();
   }
 
+  @State(Scope.Thread)
+  public static class CoulombGlobalStateSIMD {
+    int order = 5;
+    CoulombTensorGlobalSIMD coulombTensorGlobal = new CoulombTensorGlobalSIMD(order);
+  }
+
+  @State(Scope.Thread)
+  public static class CoulombQIStateSIMD {
+    int order = 5;
+    CoulombTensorQISIMD coulombTensorQI = new CoulombTensorQISIMD(order);
+  }
+
   @Benchmark
   @BenchmarkMode(AverageTime)
   @OutputTimeUnit(NANOSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
-  @Fork(value = 1)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
   public void rotateFrame(QIState state) {
     state.qiFrame.setAndRotate(r, state.mI, state.mK);
     state.qiFrame.toGlobal(state.Fi);
@@ -193,11 +229,10 @@ public class MultipoleBenchmark {
   @OutputTimeUnit(NANOSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
-  @Fork(value = 1)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
   public void coulombTensorGlobal(GlobalCoulombState state, Blackhole blackhole) {
     state.coulombTensorGlobal.generateTensor(r);
-    double e = state.coulombTensorGlobal.multipoleEnergyAndGradient(state.mI, state.mK, state.Fi,
-        state.Fk, state.Ti, state.Tk);
+    double e = state.coulombTensorGlobal.multipoleEnergyAndGradient(state.mI, state.mK, state.Fi, state.Fk, state.Ti, state.Tk);
     e += state.coulombTensorGlobal.polarizationEnergyAndGradient(state.mI, state.mK,
         1.0, 1.0, 1.0, state.Fi, state.Ti, state.Tk);
     blackhole.consume(e);
@@ -208,15 +243,34 @@ public class MultipoleBenchmark {
   @OutputTimeUnit(NANOSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
-  @Fork(value = 1)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void coulombTensorGlobalSIMD(CoulombGlobalStateSIMD state) {
+    state.coulombTensorGlobal.setR(vR);
+    state.coulombTensorGlobal.generateTensor();
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void coulombTensorQISIMD(CoulombQIStateSIMD state) {
+    state.coulombTensorQI.setR(vR);
+    state.coulombTensorQI.generateTensor();
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
   public void gkTensorGlobal(GlobalGKState state, Blackhole blackhole) {
     double r2 = DoubleMath.length(r);
     state.gkEnergyGlobal.initPotential(r, r2, 2.0, 2.0);
-    double e = state.gkEnergyGlobal.multipoleEnergyAndGradient(state.mI, state.mK, state.Fi,
-        state.Ti,
-        state.Tk);
-    e += state.gkEnergyGlobal.polarizationEnergyAndGradient(state.mI, state.mK, 1.0, state.Fi,
-        state.Ti, state.Tk);
+    double e = state.gkEnergyGlobal.multipoleEnergyAndGradient(state.mI, state.mK, state.Fi, state.Ti, state.Tk);
+    e += state.gkEnergyGlobal.polarizationEnergyAndGradient(state.mI, state.mK, 1.0, state.Fi, state.Ti, state.Tk);
     state.gkEnergyGlobal.initBorn(r, r2, 2.0, 2.0);
     double db = state.gkEnergyGlobal.multipoleEnergyBornGrad(state.mI, state.mK);
     db += state.gkEnergyGlobal.polarizationEnergyBornGrad(state.mI, state.mK, true);
@@ -228,7 +282,7 @@ public class MultipoleBenchmark {
   @OutputTimeUnit(NANOSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
-  @Fork(value = 1)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
   public void coulombTensorQI(QICoulombState state, Blackhole blackhole) {
     state.qiFrame.setAndRotate(r, state.mI, state.mK);
     state.coulombTensorQI.generateTensor(r);
@@ -247,15 +301,13 @@ public class MultipoleBenchmark {
   @OutputTimeUnit(NANOSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
-  @Fork(value = 1)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
   public void gkTensorQI(QIGKState state, Blackhole blackhole) {
     state.qiFrame.setAndRotate(r, state.mI, state.mK);
     double r2 = DoubleMath.length(r);
     state.gkEnergyQI.initPotential(r, r2, 2.0, 2.0);
-    double e = state.gkEnergyQI.multipoleEnergyAndGradient(state.mI, state.mK, state.Fi, state.Ti,
-        state.Tk);
-    e += state.gkEnergyQI.polarizationEnergyAndGradient(state.mI, state.mK, 1.0, state.Fi, state.Ti,
-        state.Tk);
+    double e = state.gkEnergyQI.multipoleEnergyAndGradient(state.mI, state.mK, state.Fi, state.Ti, state.Tk);
+    e += state.gkEnergyQI.polarizationEnergyAndGradient(state.mI, state.mK, 1.0, state.Fi, state.Ti, state.Tk);
     state.gkEnergyQI.initBorn(r, r2, 2.0, 2.0);
     double db = state.gkEnergyQI.multipoleEnergyBornGrad(state.mI, state.mK);
     db += state.gkEnergyQI.polarizationEnergyBornGrad(state.mI, state.mK, true);
