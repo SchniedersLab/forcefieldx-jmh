@@ -109,7 +109,13 @@ public class PanamaBenchmark {
   @OutputTimeUnit(NANOSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
-  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  @Fork(value = 1, jvmArgsPrepend = {
+      "--add-modules=jdk.incubator.vector",
+      "-XX:+UnlockDiagnosticVMOptions",
+      "-XX:+LogCompilation",
+      // "-XX:+PrintAssembly",
+      "-XX:CompileCommand=print ffx.numerics.benchmark.PanamaBenchmark::vector"
+  })
   public double vector() {
     var sum = zero(SPECIES);
     for (int i = 0; i < size; i += SPECIES.length()) {
@@ -125,7 +131,13 @@ public class PanamaBenchmark {
   @OutputTimeUnit(NANOSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
-  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  @Fork(value = 1, jvmArgsPrepend = {
+      "--add-modules=jdk.incubator.vector",
+      "-XX:+UnlockDiagnosticVMOptions",
+      "-XX:+LogCompilation",
+      // "-XX:+PrintAssembly",
+      "-XX:CompileCommand=print ffx.numerics.benchmark.PanamaBenchmark::vectorWithMask"
+  })
   public double vectorWithMask() {
     var sum = zero(SPECIES);
     for (int i = 0; i < size; i += SPECIES.length()) {
@@ -142,7 +154,13 @@ public class PanamaBenchmark {
   @OutputTimeUnit(NANOSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
-  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  @Fork(value = 1, jvmArgsPrepend = {
+      "--add-modules=jdk.incubator.vector",
+      "-XX:+UnlockDiagnosticVMOptions",
+      "-XX:+LogCompilation",
+      // "-XX:+PrintAssembly",
+      "-XX:CompileCommand=print ffx.numerics.benchmark.PanamaBenchmark::vectorUnrolled4"
+  })
   public double vectorUnrolled4() {
     var sum1 = zero(SPECIES);
     var sum2 = zero(SPECIES);

@@ -54,6 +54,7 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.util.Arrays;
 
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import static jdk.incubator.vector.VectorOperators.ADD;
 import static org.openjdk.jmh.annotations.Mode.AverageTime;
 
 /**
@@ -201,14 +202,30 @@ public class MultipoleBenchmark {
 
   @State(Scope.Thread)
   public static class CoulombGlobalStateSIMD {
-    int order = 5;
+    int order = 2;
+    DoubleVector[] work = new DoubleVector[3];
+    DoubleVector x;
+    DoubleVector y;
+    DoubleVector z;
     CoulombTensorGlobalSIMD coulombTensorGlobal = new CoulombTensorGlobalSIMD(order);
+
+    public CoulombGlobalStateSIMD() {
+      coulombTensorGlobal.setR(vR);
+      x = vR[0];
+      y = vR[1];
+      z = vR[2];
+      work = coulombTensorGlobal.getSource();
+    }
   }
 
   @State(Scope.Thread)
   public static class CoulombQIStateSIMD {
-    int order = 5;
+    int order = 2;
     CoulombTensorQISIMD coulombTensorQI = new CoulombTensorQISIMD(order);
+
+    public CoulombQIStateSIMD() {
+      coulombTensorQI.setR(vR);
+    }
   }
 
   @Benchmark
@@ -243,10 +260,39 @@ public class MultipoleBenchmark {
   @OutputTimeUnit(NANOSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
-  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
-  public void coulombTensorGlobalSIMD(CoulombGlobalStateSIMD state) {
-    state.coulombTensorGlobal.setR(vR);
-    state.coulombTensorGlobal.generateTensor();
+  @Fork(value = 1, jvmArgsPrepend = {
+      "--add-modules=jdk.incubator.vector",
+      "-XX:+UnlockDiagnosticVMOptions",
+      "-XX:+LogCompilation",
+      "-XX:+PrintAssembly",
+      "-XX:CompileCommand=print"
+  })
+  public void coulombTensorGlobalSIMD(CoulombGlobalStateSIMD state, Blackhole blackhole) {
+    double total = order2(state);
+    blackhole.consume(total);
+  }
+
+  private double order2(CoulombGlobalStateSIMD state) {
+    DoubleVector term0000 = state.work[0];
+    DoubleVector term0001 = state.work[1];
+    DoubleVector term0002 = state.work[2];
+    DoubleVector x = state.x;
+    DoubleVector y = state.y;
+    DoubleVector z = state.z;
+    DoubleVector R000 = term0000;
+    DoubleVector R100 = x.mul(term0001);
+    DoubleVector term1001 = x.mul(term0002);
+    DoubleVector R200 = x.fma(term1001, term0001);
+    DoubleVector R010 = y.mul(term0001);
+    DoubleVector term0101 = y.mul(term0002);
+    DoubleVector R020 = y.fma(term0101, term0001);
+    DoubleVector R110 = y.mul(term1001);
+    DoubleVector R001 = z.mul(term0001);
+    DoubleVector term0011 = z.mul(term0002);
+    DoubleVector R002 = z.fma(term0011, term0001);
+    DoubleVector R011 = z.mul(term0101);
+    DoubleVector R101 = z.mul(term1001);
+    return R000.add(R100).add(R200).add(R010).add(R020).add(R110).add(R001).add(R002).add(R011).add(R101).reduceLanes(ADD);
   }
 
   @Benchmark
@@ -254,9 +300,14 @@ public class MultipoleBenchmark {
   @OutputTimeUnit(NANOSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
-  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  @Fork(value = 1, jvmArgsPrepend = {
+      "--add-modules=jdk.incubator.vector",
+      "-XX:+UnlockDiagnosticVMOptions",
+      "-XX:+LogCompilation",
+      "-XX:+PrintAssembly",
+      "-XX:CompileCommand=print ffx.numerics.multipole.CoulombTensorQISIMD::order2"
+  })
   public void coulombTensorQISIMD(CoulombQIStateSIMD state) {
-    state.coulombTensorQI.setR(vR);
     state.coulombTensorQI.generateTensor();
   }
 
