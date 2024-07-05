@@ -41,6 +41,7 @@ import ffx.numerics.multipole.GKEnergyQI;
 import ffx.numerics.multipole.PolarizableMultipole;
 import ffx.numerics.multipole.QIFrame;
 import jdk.incubator.vector.DoubleVector;
+import jdk.incubator.vector.VectorSpecies;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -115,7 +116,8 @@ public class MultipoleBenchmark {
   protected final static double[] Ui = {0.04886563833303603, 0.0, -0.0018979726219775425};
   protected final static double[] Uk = {-0.040839567654139396, 0.0, -5.982126263609587E-4};
 
-  protected final static int vectorLength = DoubleVector.zero(DoubleVector.SPECIES_PREFERRED).length();
+  protected final static VectorSpecies<Double> SPECIES = DoubleVector.SPECIES_512;
+  protected final static int vectorLength = DoubleVector.zero(SPECIES).length();
   protected final static double[][] VQi = new double[10][vectorLength];
   protected final static double[][] VQk = new double[10][vectorLength];
   protected final static double[][] VUi = new double[3][vectorLength];
@@ -130,7 +132,7 @@ public class MultipoleBenchmark {
     for (int i = 0; i < 3; i++) {
       Arrays.fill(VUi[i], Ui[i]);
       Arrays.fill(VUk[i], Uk[i]);
-      vR[i] = DoubleVector.broadcast(DoubleVector.SPECIES_PREFERRED, r[i]);
+      vR[i] = DoubleVector.broadcast(SPECIES, r[i]);
     }
   }
 
@@ -202,7 +204,7 @@ public class MultipoleBenchmark {
 
   @State(Scope.Thread)
   public static class CoulombGlobalStateSIMD {
-    int order = 2;
+    int order = 5;
     DoubleVector[] work = new DoubleVector[3];
     DoubleVector x;
     DoubleVector y;
@@ -220,7 +222,7 @@ public class MultipoleBenchmark {
 
   @State(Scope.Thread)
   public static class CoulombQIStateSIMD {
-    int order = 2;
+    int order = 5;
     CoulombTensorQISIMD coulombTensorQI = new CoulombTensorQISIMD(order);
 
     public CoulombQIStateSIMD() {
@@ -264,12 +266,14 @@ public class MultipoleBenchmark {
       "--add-modules=jdk.incubator.vector",
       "-XX:+UnlockDiagnosticVMOptions",
       "-XX:+LogCompilation",
-      "-XX:+PrintAssembly",
-      "-XX:CompileCommand=print"
+      // "-XX:+PrintAssembly",
+      "-XX:CompileCommand=print ffx.numerics.multipole.CoulombTensorGlobalSIMD::order5"
   })
   public void coulombTensorGlobalSIMD(CoulombGlobalStateSIMD state, Blackhole blackhole) {
-    double total = order2(state);
-    blackhole.consume(total);
+    state.coulombTensorGlobal.setR(vR);
+    state.coulombTensorGlobal.generateTensor();
+    // double total = order2(state);
+    // blackhole.consume(total);
   }
 
   private double order2(CoulombGlobalStateSIMD state) {
@@ -304,10 +308,10 @@ public class MultipoleBenchmark {
       "--add-modules=jdk.incubator.vector",
       "-XX:+UnlockDiagnosticVMOptions",
       "-XX:+LogCompilation",
-      "-XX:+PrintAssembly",
-      "-XX:CompileCommand=print ffx.numerics.multipole.CoulombTensorQISIMD::order2"
+      "-XX:CompileCommand=print ffx.numerics.multipole.CoulombTensorQISIMD::order5"
   })
   public void coulombTensorQISIMD(CoulombQIStateSIMD state) {
+    state.coulombTensorQI.setR(vR);
     state.coulombTensorQI.generateTensor();
   }
 
