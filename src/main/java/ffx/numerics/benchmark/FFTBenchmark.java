@@ -51,6 +51,7 @@ public class FFTBenchmark {
   public static final double[] in64 = new double[n * 2];
   public static final float[] in32 = new float[n * 2];
   public static int sign = 1;
+  public static int pass2InnerLoopCycles = n / 2;
 
   static {
     Random random = new Random(1);
@@ -79,7 +80,9 @@ public class FFTBenchmark {
     }
     pass2Mask64 = VectorMask.fromArray(VSPEC_F64, negateMask, 0);
     pass2Shuffle64 = VectorShuffle.fromArray(VSPEC_F64, shuffleMask, 0);
-    System.out.println("DoubleVector.SPECIES_PREFERRED: " + VSPEC_F64);
+    System.out.println("\nDoubleVector.SPECIES_PREFERRED: " + VSPEC_F64);
+    System.out.println("Scalar Inner loop cycles: " + pass2InnerLoopCycles);
+    System.out.println("SIMD Inner loop cycles:   " + pass2InnerLoopCycles / (VSPEC_F64.length() / 2));
   }
 
   private static final VectorSpecies<Float> VSPEC_F32 = FloatVector.SPECIES_PREFERRED;
@@ -106,7 +109,9 @@ public class FFTBenchmark {
     }
     pass2Mask32 = VectorMask.fromArray(VSPEC_F32, negateMask, 0);
     pass2Shuffle32 = VectorShuffle.fromArray(VSPEC_F32, shuffleMask, 0);
-    System.out.println("FloatVector.SPECIES_PREFERRED: " + VSPEC_F32);
+    System.out.println("\nFloatVector.SPECIES_PREFERRED: " + VSPEC_F32);
+    System.out.println("Scalar Inner loop cycles: " + pass2InnerLoopCycles);
+    System.out.println("SIMD Inner loop cycles:   " + pass2InnerLoopCycles / (VSPEC_F32.length() / 2));
   }
 
   @State(Scope.Thread)
@@ -132,8 +137,8 @@ public class FFTBenchmark {
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
   public void doubleVectorFFTPass2(FFTState_PassData64 state, Blackhole blackhole) {
-    int product = 128;
-    doublePass2(product, state.passData64, FFTState_PassData64.twiddles[6]);
+    int product = n;
+    doublePass2(product, state.passData64, FFTState_PassData64.twiddles[factors.length - 1]);
     blackhole.consume(state.passData64.out);
   }
 
@@ -144,8 +149,8 @@ public class FFTBenchmark {
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
   public void doubleVectorFFTPass2SIMD(FFTState_PassData64 state, Blackhole blackhole) {
-    int product = 128;
-    doublePass2SIMD(product, state.passData64, FFTState_PassData64.twiddles[6]);
+    int product = n;
+    doublePass2SIMD(product, state.passData64, FFTState_PassData64.twiddles[factors.length - 1]);
     blackhole.consume(state.passData64.out);
   }
 
@@ -194,10 +199,6 @@ public class FFTBenchmark {
     int j = passData64.outOffset;
     final int dataInc = VSPEC_F64.length();
     final int k1inc = dataInc / 2;
-
-    assert (product_1 % k1inc == 0)
-        : String.format("product_1=%d, k1inc=%d", product_1, k1inc);
-
     for (int k = 0; k < q; k++, j += dj) {
       final double[] twids = twiddles[k];
       DoubleVector
@@ -223,8 +224,8 @@ public class FFTBenchmark {
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
   public void floatVectorFFTPass2(FFTState_PassData32 state, Blackhole blackhole) {
-    int product = 128;
-    floatPass2(product, state.passData32, FFTState_PassData32.twiddles[6]);
+    int product = n;
+    floatPass2(product, state.passData32, FFTState_PassData32.twiddles[factors.length - 1]);
     blackhole.consume(state.passData32.out);
   }
 
@@ -235,8 +236,20 @@ public class FFTBenchmark {
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
   public void floatVectorFFTPass2SIMD(FFTState_PassData32 state, Blackhole blackhole) {
-    int product = 128;
-    floatPass2SIMD(product, state.passData32, FFTState_PassData32.twiddles[6]);
+    int product = n;
+    floatPass2SIMD(product, state.passData32, FFTState_PassData32.twiddles[factors.length - 1]);
+    blackhole.consume(state.passData32.out);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void floatVectorFFTPass2SIMDUnroll(FFTState_PassData32 state, Blackhole blackhole) {
+    int product = n;
+    floatPass2SIMDUnroll(product, state.passData32, FFTState_PassData32.twiddles[factors.length - 1]);
     blackhole.consume(state.passData32.out);
   }
 
@@ -285,10 +298,6 @@ public class FFTBenchmark {
     int j = passData64.outOffset;
     final int dataInc = VSPEC_F32.length();
     final int k1inc = dataInc / 2;
-
-    assert (product_1 % k1inc == 0)
-        : String.format("product_1=%d, k1inc=%d", product_1, k1inc);
-
     for (int k = 0; k < q; k++, j += dj) {
       final float[] twids = twiddles[k];
       FloatVector
@@ -301,6 +310,49 @@ public class FFTBenchmark {
             sum = z0.add(z1),
             x = z0.sub(z1),
             sum2 = x.fma(w_r, x.mul(w_i).rearrange(pass2Shuffle32));
+        sum.intoArray(ret, j);
+        sum2.intoArray(ret, j + dj);
+      }
+    }
+  }
+
+  private void floatPass2SIMDUnroll(int product, PassData32 passData64, float[][] twiddles) {
+    final float[] data = passData64.in;
+    final float[] ret = passData64.out;
+    final int factor = 2;
+    final int m = n / factor;
+    final int q = n / product;
+    final int product_1 = product / factor;
+    final int di = 2 * m;
+    final int dj = 2 * product_1;
+    int i = passData64.inOffset;
+    int j = passData64.outOffset;
+    final int dataInc = VSPEC_F32.length();
+    final int dataInc2 = dataInc * 2;
+    final int k1inc = dataInc;
+    for (int k = 0; k < q; k++, j += dj) {
+      final float[] twids = twiddles[k];
+      FloatVector
+          w_r = FloatVector.broadcast(VSPEC_F32, twids[0]),
+          w_i = FloatVector.broadcast(VSPEC_F32, -sign * twids[1]).mul(-1.0f, pass2Mask32);
+      for (int k1 = 0; k1 < product_1; k1 += k1inc, i += dataInc, j += dataInc) {
+        FloatVector
+            z0 = FloatVector.fromArray(VSPEC_F32, data, i),
+            z1 = FloatVector.fromArray(VSPEC_F32, data, i + di),
+            sum = z0.add(z1),
+            x = z0.sub(z1),
+            sum2 = x.fma(w_r, x.mul(w_i).rearrange(pass2Shuffle32));
+        sum.intoArray(ret, j);
+        sum2.intoArray(ret, j + dj);
+
+        // Second iteration.
+        i += dataInc;
+        j += dataInc;
+        z0 = FloatVector.fromArray(VSPEC_F32, data, i);
+        z1 = FloatVector.fromArray(VSPEC_F32, data, i + di);
+        sum = z0.add(z1);
+        x = z0.sub(z1);
+        sum2 = x.fma(w_r, x.mul(w_i).rearrange(pass2Shuffle32));
         sum.intoArray(ret, j);
         sum2.intoArray(ret, j + dj);
       }
