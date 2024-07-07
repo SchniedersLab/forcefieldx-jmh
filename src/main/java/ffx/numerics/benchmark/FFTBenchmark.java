@@ -1,6 +1,7 @@
 
 package ffx.numerics.benchmark;
 
+import ffx.numerics.fft.Complex;
 import jdk.incubator.vector.DoubleVector;
 import jdk.incubator.vector.FloatVector;
 import jdk.incubator.vector.VectorMask;
@@ -48,86 +49,125 @@ public class FFTBenchmark {
 
   public static final int n = 128;
   public static final int[] factors = {2, 2, 2, 2, 2, 2, 2};
-  public static final double[] in64 = new double[n * 2];
-  public static final float[] in32 = new float[n * 2];
+  public static final double[] inDouble = new double[n * 2];
+  public static final float[] inFloat = new float[n * 2];
   public static int sign = 1;
   public static int pass2InnerLoopCycles = n / 2;
 
+  public static final double[] inDouble32 = new double[32 * 2];
+  public static final double[] inDouble64 = new double[64 * 2];
+  public static final double[] inDouble128 = new double[128 * 2];
+  public static final double[] inDouble256 = new double[256 * 2];
+
+  // Initialize the input arrays with random values.
   static {
     Random random = new Random(1);
     for (int i = 0; i < n; i++) {
-      in32[i * 2] = random.nextFloat();
-      in64[i * 2] = random.nextDouble();
+      inFloat[i * 2] = random.nextFloat();
+      inDouble[i * 2] = random.nextDouble();
+    }
+
+    for (int i = 0; i < 32; i++) {
+      inDouble32[i * 2] = random.nextDouble();
+    }
+    for (int i = 0; i < 64; i++) {
+      inDouble64[i * 2] = random.nextDouble();
+    }
+    for (int i = 0; i < 128; i++) {
+      inDouble128[i * 2] = random.nextDouble();
+    }
+    for (int i = 0; i < 256; i++) {
+      inDouble256[i * 2] = random.nextDouble();
     }
   }
 
-  private static final VectorSpecies<Double> VSPEC_F64 = DoubleVector.SPECIES_PREFERRED;
-  private static final VectorMask<Double> pass2Mask64;
-  private static final VectorShuffle<Double> pass2Shuffle64;
+  private static final VectorSpecies<Double> DOUBLE_SPECIES = DoubleVector.SPECIES_PREFERRED;
+  private static final VectorMask<Double> pass2MaskDouble;
+  private static final VectorShuffle<Double> pass2ShuffleDouble;
 
   static {
     boolean[] negateMask;
     int[] shuffleMask;
-    if (VSPEC_F64 == DoubleVector.SPECIES_512) {
+    if (DOUBLE_SPECIES == DoubleVector.SPECIES_512) {
       negateMask = new boolean[]{false, true, false, true, false, true, false, true};
       shuffleMask = new int[]{1, 0, 3, 2, 5, 4, 7, 6};
-    } else if (VSPEC_F64 == DoubleVector.SPECIES_256) {
+    } else if (DOUBLE_SPECIES == DoubleVector.SPECIES_256) {
       negateMask = new boolean[]{false, true, false, true};
       shuffleMask = new int[]{1, 0, 3, 2};
     } else {
       negateMask = new boolean[]{false, true};
       shuffleMask = new int[]{1, 0};
     }
-    pass2Mask64 = VectorMask.fromArray(VSPEC_F64, negateMask, 0);
-    pass2Shuffle64 = VectorShuffle.fromArray(VSPEC_F64, shuffleMask, 0);
-    System.out.println("\nDoubleVector.SPECIES_PREFERRED: " + VSPEC_F64);
-    System.out.println("Scalar Inner loop cycles: " + pass2InnerLoopCycles);
-    System.out.println("SIMD Inner loop cycles:   " + pass2InnerLoopCycles / (VSPEC_F64.length() / 2));
+    pass2MaskDouble = VectorMask.fromArray(DOUBLE_SPECIES, negateMask, 0);
+    pass2ShuffleDouble = VectorShuffle.fromArray(DOUBLE_SPECIES, shuffleMask, 0);
+    System.out.println("\nDoubleVector.SPECIES_PREFERRED: " + DOUBLE_SPECIES);
   }
 
-  private static final VectorSpecies<Float> VSPEC_F32 = FloatVector.SPECIES_PREFERRED;
-  private static final VectorMask<Float> pass2Mask32;
-  private static final VectorShuffle<Float> pass2Shuffle32;
+  private static final VectorSpecies<Float> FLOAT_SPECIES = FloatVector.SPECIES_PREFERRED;
+  private static final VectorMask<Float> pass2MaskFloat;
+  private static final VectorShuffle<Float> pass2ShuffleFloat;
 
   static {
     boolean[] negateMask;
     int[] shuffleMask;
-    if (VSPEC_F32 == FloatVector.SPECIES_512) {
+    if (FLOAT_SPECIES == FloatVector.SPECIES_512) {
       negateMask = new boolean[]{
           false, true, false, true, false, true, false, true,
           false, true, false, true, false, true, false, true};
       shuffleMask = new int[]{1, 0, 3, 2, 5, 4, 7, 6, 9, 8, 11, 10, 13, 12, 15, 14};
-    } else if (VSPEC_F32 == FloatVector.SPECIES_256) {
+    } else if (FLOAT_SPECIES == FloatVector.SPECIES_256) {
       negateMask = new boolean[]{false, true, false, true, false, true, false, true};
       shuffleMask = new int[]{1, 0, 3, 2, 5, 4, 7, 6};
-    } else if (VSPEC_F32 == FloatVector.SPECIES_128) {
+    } else if (FLOAT_SPECIES == FloatVector.SPECIES_128) {
       negateMask = new boolean[]{false, true, false, true};
       shuffleMask = new int[]{1, 0, 3, 2};
     } else {
       negateMask = new boolean[]{false, true};
       shuffleMask = new int[]{1, 0};
     }
-    pass2Mask32 = VectorMask.fromArray(VSPEC_F32, negateMask, 0);
-    pass2Shuffle32 = VectorShuffle.fromArray(VSPEC_F32, shuffleMask, 0);
-    System.out.println("\nFloatVector.SPECIES_PREFERRED: " + VSPEC_F32);
-    System.out.println("Scalar Inner loop cycles: " + pass2InnerLoopCycles);
-    System.out.println("SIMD Inner loop cycles:   " + pass2InnerLoopCycles / (VSPEC_F32.length() / 2));
+    pass2MaskFloat = VectorMask.fromArray(FLOAT_SPECIES, negateMask, 0);
+    pass2ShuffleFloat = VectorShuffle.fromArray(FLOAT_SPECIES, shuffleMask, 0);
+    System.out.println("\nFloatVector.SPECIES_PREFERRED: " + FLOAT_SPECIES);
   }
 
   @State(Scope.Thread)
   public static class FFTState_PassData64 {
-    static final double[][][] twiddles = wavetable();
-    double[] in = Arrays.copyOf(in64, in64.length);
+    static final double[][][] twiddles = wavetableDouble();
+    double[] in = Arrays.copyOf(inDouble, inDouble.length);
     double[] out = new double[n * 2];
-    PassData64 passData64 = new PassData64(in, 0, out, 0);
+    PassDataDouble passDataDouble = new PassDataDouble(in, 0, out, 0);
   }
 
   @State(Scope.Thread)
   public static class FFTState_PassData32 {
     static final float[][][] twiddles = wavetableFloat();
-    float[] in = Arrays.copyOf(in32, in32.length);
+    float[] in = Arrays.copyOf(inFloat, inFloat.length);
     float[] out = new float[n * 2];
-    PassData32 passData32 = new PassData32(in, 0, out, 0);
+    PassDataFloat passDataFloat = new PassDataFloat(in, 0, out, 0);
+  }
+
+  @State(Scope.Thread)
+  public static class Complex32 {
+    Complex complex = new Complex(32);
+    double[] in = Arrays.copyOf(inDouble32, inDouble32.length);
+  }
+
+  @State(Scope.Thread)
+  public static class Complex64 {
+    Complex complex = new Complex(64);
+    double[] in = Arrays.copyOf(inDouble64, inDouble64.length);
+  }
+
+  @State(Scope.Thread)
+  public static class Complex128 {
+    Complex complex = new Complex(128);
+    double[] in = Arrays.copyOf(inDouble128, inDouble128.length);
+  }
+
+  @State(Scope.Thread)
+  public static class Complex256 {
+    Complex complex = new Complex(256);
+    double[] in = Arrays.copyOf(inDouble256, inDouble256.length);
   }
 
   @Benchmark
@@ -138,8 +178,8 @@ public class FFTBenchmark {
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
   public void doubleVectorFFTPass2(FFTState_PassData64 state, Blackhole blackhole) {
     int product = n;
-    doublePass2(product, state.passData64, FFTState_PassData64.twiddles[factors.length - 1]);
-    blackhole.consume(state.passData64.out);
+    doublePass2(product, state.passDataDouble, FFTState_PassData64.twiddles[factors.length - 1]);
+    blackhole.consume(state.passDataDouble.out);
   }
 
   @Benchmark
@@ -150,21 +190,141 @@ public class FFTBenchmark {
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
   public void doubleVectorFFTPass2SIMD(FFTState_PassData64 state, Blackhole blackhole) {
     int product = n;
-    doublePass2SIMD(product, state.passData64, FFTState_PassData64.twiddles[factors.length - 1]);
-    blackhole.consume(state.passData64.out);
+    doublePass2SIMD(product, state.passDataDouble, FFTState_PassData64.twiddles[factors.length - 1]);
+    blackhole.consume(state.passDataDouble.out);
   }
 
-  private void doublePass2(int product, PassData64 passData64, double[][] twiddles) {
-    final double[] data = passData64.in;
-    final double[] ret = passData64.out;
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void floatVectorFFTPass2(FFTState_PassData32 state, Blackhole blackhole) {
+    int product = n;
+    floatPass2(product, state.passDataFloat, FFTState_PassData32.twiddles[factors.length - 1]);
+    blackhole.consume(state.passDataFloat.out);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void floatVectorFFTPass2SIMD(FFTState_PassData32 state, Blackhole blackhole) {
+    int product = n;
+    floatPass2SIMD(product, state.passDataFloat, FFTState_PassData32.twiddles[factors.length - 1]);
+    blackhole.consume(state.passDataFloat.out);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex32(Complex32 state, Blackhole blackhole) {
+    state.complex.setUseSIMD(false);
+    state.complex.fft(state.in, 0, 2);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex32SIMD(Complex32 state, Blackhole blackhole) {
+    state.complex.setUseSIMD(true);
+    state.complex.fft(state.in, 0, 2);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex64(Complex64 state, Blackhole blackhole) {
+    state.complex.setUseSIMD(false);
+    state.complex.fft(state.in, 0, 2);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex64SIMD(Complex64 state, Blackhole blackhole) {
+    state.complex.setUseSIMD(true);
+    state.complex.fft(state.in, 0, 2);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex128(Complex128 state, Blackhole blackhole) {
+    state.complex.setUseSIMD(false);
+    state.complex.fft(state.in, 0, 2);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex128SIMD(Complex128 state, Blackhole blackhole) {
+    state.complex.setUseSIMD(true);
+    state.complex.fft(state.in, 0, 2);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex256(Complex256 state, Blackhole blackhole) {
+    state.complex.setUseSIMD(false);
+    state.complex.fft(state.in, 0, 2);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex256SIMD(Complex256 state, Blackhole blackhole) {
+    state.complex.setUseSIMD(true);
+    state.complex.fft(state.in, 0, 2);
+    blackhole.consume(state.in);
+  }
+
+  private void doublePass2(int product, PassDataDouble passDataDouble, double[][] twiddles) {
+    final double[] data = passDataDouble.in;
+    final double[] ret = passDataDouble.out;
     final int factor = 2;
     final int m = n / factor;
     final int q = n / product;
     final int product_1 = product / factor;
     final int di = 2 * m;
     final int dj = 2 * product_1;
-    int i = passData64.inOffset;
-    int j = passData64.outOffset;
+    int i = passDataDouble.inOffset;
+    int j = passDataDouble.outOffset;
     for (int k = 0; k < q; k++, j += dj) {
       final double[] twids = twiddles[k];
       final double w_r = twids[0];
@@ -186,74 +346,38 @@ public class FFTBenchmark {
     }
   }
 
-  private void doublePass2SIMD(int product, PassData64 passData64, double[][] twiddles) {
-    final double[] data = passData64.in;
-    final double[] ret = passData64.out;
+  private void doublePass2SIMD(int product, PassDataDouble passDataDouble, double[][] twiddles) {
+    final double[] data = passDataDouble.in;
+    final double[] ret = passDataDouble.out;
     final int factor = 2;
     final int m = n / factor;
     final int q = n / product;
     final int product_1 = product / factor;
     final int di = 2 * m;
     final int dj = 2 * product_1;
-    int i = passData64.inOffset;
-    int j = passData64.outOffset;
-    final int dataInc = VSPEC_F64.length();
+    int i = passDataDouble.inOffset;
+    int j = passDataDouble.outOffset;
+    final int dataInc = DOUBLE_SPECIES.length();
     final int k1inc = dataInc / 2;
     for (int k = 0; k < q; k++, j += dj) {
       final double[] twids = twiddles[k];
       DoubleVector
-          w_r = DoubleVector.broadcast(VSPEC_F64, twids[0]),
-          w_i = DoubleVector.broadcast(VSPEC_F64, -sign * twids[1]).mul(-1.0, pass2Mask64);
+          w_r = DoubleVector.broadcast(DOUBLE_SPECIES, twids[0]),
+          w_i = DoubleVector.broadcast(DOUBLE_SPECIES, -sign * twids[1]).mul(-1.0, pass2MaskDouble);
       for (int k1 = 0; k1 < product_1; k1 += k1inc, i += dataInc, j += dataInc) {
         DoubleVector
-            z0 = DoubleVector.fromArray(VSPEC_F64, data, i),
-            z1 = DoubleVector.fromArray(VSPEC_F64, data, i + di),
+            z0 = DoubleVector.fromArray(DOUBLE_SPECIES, data, i),
+            z1 = DoubleVector.fromArray(DOUBLE_SPECIES, data, i + di),
             sum = z0.add(z1),
             x = z0.sub(z1),
-            sum2 = x.fma(w_r, x.mul(w_i).rearrange(pass2Shuffle64));
+            sum2 = x.fma(w_r, x.mul(w_i).rearrange(pass2ShuffleDouble));
         sum.intoArray(ret, j);
         sum2.intoArray(ret, j + dj);
       }
     }
   }
 
-  @Benchmark
-  @BenchmarkMode(AverageTime)
-  @OutputTimeUnit(NANOSECONDS)
-  @Warmup(iterations = warmUpIterations, time = warmupTime)
-  @Measurement(iterations = measurementIterations, time = measurementTime)
-  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
-  public void floatVectorFFTPass2(FFTState_PassData32 state, Blackhole blackhole) {
-    int product = n;
-    floatPass2(product, state.passData32, FFTState_PassData32.twiddles[factors.length - 1]);
-    blackhole.consume(state.passData32.out);
-  }
-
-  @Benchmark
-  @BenchmarkMode(AverageTime)
-  @OutputTimeUnit(NANOSECONDS)
-  @Warmup(iterations = warmUpIterations, time = warmupTime)
-  @Measurement(iterations = measurementIterations, time = measurementTime)
-  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
-  public void floatVectorFFTPass2SIMD(FFTState_PassData32 state, Blackhole blackhole) {
-    int product = n;
-    floatPass2SIMD(product, state.passData32, FFTState_PassData32.twiddles[factors.length - 1]);
-    blackhole.consume(state.passData32.out);
-  }
-
-  @Benchmark
-  @BenchmarkMode(AverageTime)
-  @OutputTimeUnit(NANOSECONDS)
-  @Warmup(iterations = warmUpIterations, time = warmupTime)
-  @Measurement(iterations = measurementIterations, time = measurementTime)
-  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
-  public void floatVectorFFTPass2SIMDUnroll(FFTState_PassData32 state, Blackhole blackhole) {
-    int product = n;
-    floatPass2SIMDUnroll(product, state.passData32, FFTState_PassData32.twiddles[factors.length - 1]);
-    blackhole.consume(state.passData32.out);
-  }
-
-  private void floatPass2(int product, PassData32 passData64, float[][] twiddles) {
+  private void floatPass2(int product, PassDataFloat passData64, float[][] twiddles) {
     final float[] data = passData64.in;
     final float[] ret = passData64.out;
     final int factor = 2;
@@ -285,7 +409,7 @@ public class FFTBenchmark {
     }
   }
 
-  private void floatPass2SIMD(int product, PassData32 passData64, float[][] twiddles) {
+  private void floatPass2SIMD(int product, PassDataFloat passData64, float[][] twiddles) {
     final float[] data = passData64.in;
     final float[] ret = passData64.out;
     final int factor = 2;
@@ -296,63 +420,20 @@ public class FFTBenchmark {
     final int dj = 2 * product_1;
     int i = passData64.inOffset;
     int j = passData64.outOffset;
-    final int dataInc = VSPEC_F32.length();
+    final int dataInc = FLOAT_SPECIES.length();
     final int k1inc = dataInc / 2;
     for (int k = 0; k < q; k++, j += dj) {
       final float[] twids = twiddles[k];
       FloatVector
-          w_r = FloatVector.broadcast(VSPEC_F32, twids[0]),
-          w_i = FloatVector.broadcast(VSPEC_F32, -sign * twids[1]).mul(-1.0f, pass2Mask32);
+          w_r = FloatVector.broadcast(FLOAT_SPECIES, twids[0]),
+          w_i = FloatVector.broadcast(FLOAT_SPECIES, -sign * twids[1]).mul(-1.0f, pass2MaskFloat);
       for (int k1 = 0; k1 < product_1; k1 += k1inc, i += dataInc, j += dataInc) {
         FloatVector
-            z0 = FloatVector.fromArray(VSPEC_F32, data, i),
-            z1 = FloatVector.fromArray(VSPEC_F32, data, i + di),
+            z0 = FloatVector.fromArray(FLOAT_SPECIES, data, i),
+            z1 = FloatVector.fromArray(FLOAT_SPECIES, data, i + di),
             sum = z0.add(z1),
             x = z0.sub(z1),
-            sum2 = x.fma(w_r, x.mul(w_i).rearrange(pass2Shuffle32));
-        sum.intoArray(ret, j);
-        sum2.intoArray(ret, j + dj);
-      }
-    }
-  }
-
-  private void floatPass2SIMDUnroll(int product, PassData32 passData64, float[][] twiddles) {
-    final float[] data = passData64.in;
-    final float[] ret = passData64.out;
-    final int factor = 2;
-    final int m = n / factor;
-    final int q = n / product;
-    final int product_1 = product / factor;
-    final int di = 2 * m;
-    final int dj = 2 * product_1;
-    int i = passData64.inOffset;
-    int j = passData64.outOffset;
-    final int dataInc = VSPEC_F32.length();
-    final int dataInc2 = dataInc * 2;
-    final int k1inc = dataInc;
-    for (int k = 0; k < q; k++, j += dj) {
-      final float[] twids = twiddles[k];
-      FloatVector
-          w_r = FloatVector.broadcast(VSPEC_F32, twids[0]),
-          w_i = FloatVector.broadcast(VSPEC_F32, -sign * twids[1]).mul(-1.0f, pass2Mask32);
-      for (int k1 = 0; k1 < product_1; k1 += k1inc, i += dataInc, j += dataInc) {
-        FloatVector
-            z0 = FloatVector.fromArray(VSPEC_F32, data, i),
-            z1 = FloatVector.fromArray(VSPEC_F32, data, i + di),
-            sum = z0.add(z1),
-            x = z0.sub(z1),
-            sum2 = x.fma(w_r, x.mul(w_i).rearrange(pass2Shuffle32));
-        sum.intoArray(ret, j);
-        sum2.intoArray(ret, j + dj);
-
-        // Second iteration.
-        i += dataInc;
-        j += dataInc;
-        z0 = FloatVector.fromArray(VSPEC_F32, data, i);
-        z1 = FloatVector.fromArray(VSPEC_F32, data, i + di);
-        sum = z0.add(z1);
-        x = z0.sub(z1);
-        sum2 = x.fma(w_r, x.mul(w_i).rearrange(pass2Shuffle32));
+            sum2 = x.fma(w_r, x.mul(w_i).rearrange(pass2ShuffleFloat));
         sum.intoArray(ret, j);
         sum2.intoArray(ret, j + dj);
       }
@@ -367,7 +448,7 @@ public class FFTBenchmark {
    * @param out       Output data for the current pass.
    * @param outOffset Offset into output array.
    */
-  private record PassData64(double[] in, int inOffset, double[] out, int outOffset) {
+  private record PassDataDouble(double[] in, int inOffset, double[] out, int outOffset) {
     // Empty.
   }
 
@@ -379,7 +460,7 @@ public class FFTBenchmark {
    * @param out       Output data for the current pass.
    * @param outOffset Offset into output array.
    */
-  private record PassData32(float[] in, int inOffset, float[] out, int outOffset) {
+  private record PassDataFloat(float[] in, int inOffset, float[] out, int outOffset) {
     // Empty.
   }
 
@@ -388,7 +469,7 @@ public class FFTBenchmark {
    *
    * @return twiddle factors.
    */
-  private static double[][][] wavetable() {
+  private static double[][][] wavetableDouble() {
     if (n < 2) {
       return null;
     }
