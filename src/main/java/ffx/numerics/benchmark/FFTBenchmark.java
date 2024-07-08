@@ -4,7 +4,6 @@ package ffx.numerics.benchmark;
 import ffx.numerics.fft.Complex;
 import jdk.incubator.vector.DoubleVector;
 import jdk.incubator.vector.FloatVector;
-import jdk.incubator.vector.VectorMask;
 import jdk.incubator.vector.VectorShuffle;
 import jdk.incubator.vector.VectorSpecies;
 import org.apache.commons.math3.util.FastMath;
@@ -52,7 +51,6 @@ public class FFTBenchmark {
   public static final double[] inDouble = new double[n * 2];
   public static final float[] inFloat = new float[n * 2];
   public static int sign = 1;
-  public static int pass2InnerLoopCycles = n / 2;
 
   public static final double[] inDouble32 = new double[32 * 2];
   public static final double[] inDouble64 = new double[64 * 2];
@@ -82,50 +80,50 @@ public class FFTBenchmark {
   }
 
   private static final VectorSpecies<Double> DOUBLE_SPECIES = DoubleVector.SPECIES_PREFERRED;
-  private static final VectorMask<Double> pass2MaskDouble;
+  private static final DoubleVector negateIm;
   private static final VectorShuffle<Double> pass2ShuffleDouble;
 
   static {
-    boolean[] negateMask;
+    double[] negate;
     int[] shuffleMask;
     if (DOUBLE_SPECIES == DoubleVector.SPECIES_512) {
-      negateMask = new boolean[]{false, true, false, true, false, true, false, true};
+      negate = new double[]{1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0};
       shuffleMask = new int[]{1, 0, 3, 2, 5, 4, 7, 6};
     } else if (DOUBLE_SPECIES == DoubleVector.SPECIES_256) {
-      negateMask = new boolean[]{false, true, false, true};
+      negate = new double[]{1.0, -1.0, 1.0, -1.0};
       shuffleMask = new int[]{1, 0, 3, 2};
     } else {
-      negateMask = new boolean[]{false, true};
+      negate = new double[]{1.0, -1.0};
       shuffleMask = new int[]{1, 0};
     }
-    pass2MaskDouble = VectorMask.fromArray(DOUBLE_SPECIES, negateMask, 0);
+    negateIm = DoubleVector.fromArray(DOUBLE_SPECIES, negate, 0);
     pass2ShuffleDouble = VectorShuffle.fromArray(DOUBLE_SPECIES, shuffleMask, 0);
     System.out.println("\nDoubleVector.SPECIES_PREFERRED: " + DOUBLE_SPECIES);
   }
 
   private static final VectorSpecies<Float> FLOAT_SPECIES = FloatVector.SPECIES_PREFERRED;
-  private static final VectorMask<Float> pass2MaskFloat;
+  private static final FloatVector negateImFloat;
   private static final VectorShuffle<Float> pass2ShuffleFloat;
 
   static {
-    boolean[] negateMask;
+    float[] negate;
     int[] shuffleMask;
     if (FLOAT_SPECIES == FloatVector.SPECIES_512) {
-      negateMask = new boolean[]{
-          false, true, false, true, false, true, false, true,
-          false, true, false, true, false, true, false, true};
+      negate = new float[]{
+          1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f,
+          1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f};
       shuffleMask = new int[]{1, 0, 3, 2, 5, 4, 7, 6, 9, 8, 11, 10, 13, 12, 15, 14};
     } else if (FLOAT_SPECIES == FloatVector.SPECIES_256) {
-      negateMask = new boolean[]{false, true, false, true, false, true, false, true};
+      negate = new float[]{1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f};
       shuffleMask = new int[]{1, 0, 3, 2, 5, 4, 7, 6};
     } else if (FLOAT_SPECIES == FloatVector.SPECIES_128) {
-      negateMask = new boolean[]{false, true, false, true};
+      negate = new float[]{1.0f, -1.0f, 1.0f, -1.0f};
       shuffleMask = new int[]{1, 0, 3, 2};
     } else {
-      negateMask = new boolean[]{false, true};
+      negate = new float[]{1.0f, -1.0f, 1.0f, -1.0f, 1.0f};
       shuffleMask = new int[]{1, 0};
     }
-    pass2MaskFloat = VectorMask.fromArray(FLOAT_SPECIES, negateMask, 0);
+    negateImFloat = FloatVector.fromArray(FLOAT_SPECIES, negate, 0);
     pass2ShuffleFloat = VectorShuffle.fromArray(FLOAT_SPECIES, shuffleMask, 0);
     System.out.println("\nFloatVector.SPECIES_PREFERRED: " + FLOAT_SPECIES);
   }
@@ -176,7 +174,7 @@ public class FFTBenchmark {
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
-  public void doubleVectorFFTPass2(FFTState_PassData64 state, Blackhole blackhole) {
+  public void Pass2DoubleVectorFFT(FFTState_PassData64 state, Blackhole blackhole) {
     int product = n;
     doublePass2(product, state.passDataDouble, FFTState_PassData64.twiddles[factors.length - 1]);
     blackhole.consume(state.passDataDouble.out);
@@ -188,7 +186,7 @@ public class FFTBenchmark {
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
-  public void doubleVectorFFTPass2SIMD(FFTState_PassData64 state, Blackhole blackhole) {
+  public void Pass2DoubleVectorFFTSIMD(FFTState_PassData64 state, Blackhole blackhole) {
     int product = n;
     doublePass2SIMD(product, state.passDataDouble, FFTState_PassData64.twiddles[factors.length - 1]);
     blackhole.consume(state.passDataDouble.out);
@@ -200,7 +198,7 @@ public class FFTBenchmark {
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
-  public void floatVectorFFTPass2(FFTState_PassData32 state, Blackhole blackhole) {
+  public void Pass2FloatVectorFFT(FFTState_PassData32 state, Blackhole blackhole) {
     int product = n;
     floatPass2(product, state.passDataFloat, FFTState_PassData32.twiddles[factors.length - 1]);
     blackhole.consume(state.passDataFloat.out);
@@ -212,7 +210,7 @@ public class FFTBenchmark {
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
-  public void floatVectorFFTPass2SIMD(FFTState_PassData32 state, Blackhole blackhole) {
+  public void Pass2FloatVectorFFTSIMD(FFTState_PassData32 state, Blackhole blackhole) {
     int product = n;
     floatPass2SIMD(product, state.passDataFloat, FFTState_PassData32.twiddles[factors.length - 1]);
     blackhole.consume(state.passDataFloat.out);
@@ -363,14 +361,16 @@ public class FFTBenchmark {
       final double[] twids = twiddles[k];
       DoubleVector
           w_r = DoubleVector.broadcast(DOUBLE_SPECIES, twids[0]),
-          w_i = DoubleVector.broadcast(DOUBLE_SPECIES, -sign * twids[1]).mul(-1.0, pass2MaskDouble);
+          w_i = DoubleVector.broadcast(DOUBLE_SPECIES, -sign * twids[1]).mul(negateIm);
       for (int k1 = 0; k1 < product_1; k1 += k1inc, i += dataInc, j += dataInc) {
         DoubleVector
             z0 = DoubleVector.fromArray(DOUBLE_SPECIES, data, i),
             z1 = DoubleVector.fromArray(DOUBLE_SPECIES, data, i + di),
             sum = z0.add(z1),
             x = z0.sub(z1),
-            sum2 = x.fma(w_r, x.mul(w_i).rearrange(pass2ShuffleDouble));
+            xw_i = x.mul(w_i),
+            sum2 = x.mul(w_r).add(xw_i.rearrange(pass2ShuffleDouble));
+            // sum2 = x.mul(w_r).add(xw_i);
         sum.intoArray(ret, j);
         sum2.intoArray(ret, j + dj);
       }
@@ -426,14 +426,16 @@ public class FFTBenchmark {
       final float[] twids = twiddles[k];
       FloatVector
           w_r = FloatVector.broadcast(FLOAT_SPECIES, twids[0]),
-          w_i = FloatVector.broadcast(FLOAT_SPECIES, -sign * twids[1]).mul(-1.0f, pass2MaskFloat);
+          w_i = FloatVector.broadcast(FLOAT_SPECIES, -sign * twids[1]).mul(negateImFloat);
       for (int k1 = 0; k1 < product_1; k1 += k1inc, i += dataInc, j += dataInc) {
         FloatVector
             z0 = FloatVector.fromArray(FLOAT_SPECIES, data, i),
             z1 = FloatVector.fromArray(FLOAT_SPECIES, data, i + di),
             sum = z0.add(z1),
             x = z0.sub(z1),
-            sum2 = x.fma(w_r, x.mul(w_i).rearrange(pass2ShuffleFloat));
+            xw_i = x.mul(w_i),
+            sum2 = x.mul(w_r).add(xw_i.rearrange(pass2ShuffleFloat));
+            // sum2 = x.mul(w_r).add(xw_i);
         sum.intoArray(ret, j);
         sum2.intoArray(ret, j + dj);
       }
