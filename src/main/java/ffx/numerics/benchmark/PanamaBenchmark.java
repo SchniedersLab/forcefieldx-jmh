@@ -197,7 +197,25 @@ public class PanamaBenchmark {
   @Fork(value = 1, jvmArgsPrepend = {
       "--add-modules=jdk.incubator.vector",
   })
-  public double vectorPreferredWithMask() {
+  public double vectorDotPreferredFMA() {
+    var sum = zero(SPECIES);
+    for (int i = 0; i < size; i += SPECIES.length()) {
+      var l = fromArray(SPECIES, left, i);
+      var r = fromArray(SPECIES, right, i);
+      sum = l.fma(r, sum);
+    }
+    return sum.reduceLanes(ADD);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {
+      "--add-modules=jdk.incubator.vector",
+  })
+  public double vectorDotPreferredByMask() {
     var sum = zero(SPECIES);
     for (int i = 0; i < size; i += SPECIES.length()) {
       var mask = SPECIES.indexInRange(i, size);
