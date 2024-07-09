@@ -1,14 +1,7 @@
 package ffx.numerics.benchmark;
 
-import static java.lang.Math.fma;
-import static java.lang.Math.random;
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
-import static jdk.incubator.vector.DoubleVector.fromArray;
-import static jdk.incubator.vector.DoubleVector.zero;
-import static jdk.incubator.vector.VectorOperators.ADD;
-import static org.openjdk.jmh.annotations.Mode.AverageTime;
-
 import jdk.incubator.vector.DoubleVector;
+import jdk.incubator.vector.FloatVector;
 import jdk.incubator.vector.VectorSpecies;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -16,6 +9,15 @@ import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Warmup;
+
+import static java.lang.Math.fma;
+import static java.lang.Math.random;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import static jdk.incubator.vector.DoubleVector.SPECIES_PREFERRED;
+import static jdk.incubator.vector.DoubleVector.fromArray;
+import static jdk.incubator.vector.DoubleVector.zero;
+import static jdk.incubator.vector.VectorOperators.ADD;
+import static org.openjdk.jmh.annotations.Mode.AverageTime;
 
 public class PanamaBenchmark {
 
@@ -37,6 +39,11 @@ public class PanamaBenchmark {
   private final static int measurementTime = 1;
 
   private static final VectorSpecies<Double> SPECIES = DoubleVector.SPECIES_PREFERRED;
+  private static final VectorSpecies<Double> SPECIES_128 = DoubleVector.SPECIES_128;
+  private static final VectorSpecies<Double> SPECIES_256 = DoubleVector.SPECIES_256;
+  private static final VectorSpecies<Double> SPECIES_512 = DoubleVector.SPECIES_512;
+
+  private static final VectorSpecies<Float> FLOAT_SPECIES = FloatVector.SPECIES_PREFERRED;
 
   private static final int size = 2048;
   private static final double[] left = new double[size];
@@ -111,12 +118,8 @@ public class PanamaBenchmark {
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {
       "--add-modules=jdk.incubator.vector",
-      "-XX:+UnlockDiagnosticVMOptions",
-      "-XX:+LogCompilation",
-      // "-XX:+PrintAssembly",
-      "-XX:CompileCommand=print ffx.numerics.benchmark.PanamaBenchmark::vector"
   })
-  public double vector() {
+  public double vectorDotPreferred() {
     var sum = zero(SPECIES);
     for (int i = 0; i < size; i += SPECIES.length()) {
       var l = fromArray(SPECIES, left, i);
@@ -133,12 +136,8 @@ public class PanamaBenchmark {
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {
       "--add-modules=jdk.incubator.vector",
-      "-XX:+UnlockDiagnosticVMOptions",
-      "-XX:+LogCompilation",
-      // "-XX:+PrintAssembly",
-      "-XX:CompileCommand=print ffx.numerics.benchmark.PanamaBenchmark::vectorWithMask"
   })
-  public double vectorWithMask() {
+  public double vectorPreferredWithMask() {
     var sum = zero(SPECIES);
     for (int i = 0; i < size; i += SPECIES.length()) {
       var mask = SPECIES.indexInRange(i, size);
@@ -154,26 +153,9 @@ public class PanamaBenchmark {
   @OutputTimeUnit(NANOSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
-  @Fork(value = 1, jvmArgsPrepend = {
-      "--add-modules=jdk.incubator.vector",
-      "-XX:+UnlockDiagnosticVMOptions",
-      "-XX:+LogCompilation",
-      // "-XX:+PrintAssembly",
-      "-XX:CompileCommand=print ffx.numerics.benchmark.PanamaBenchmark::vectorUnrolled4"
-  })
-  public double vectorUnrolled4() {
-    var sum1 = zero(SPECIES);
-    var sum2 = zero(SPECIES);
-    var sum3 = zero(SPECIES);
-    var sum4 = zero(SPECIES);
-    int width = SPECIES.length();
-    for (int i = 0; i < size; i += width * 4) {
-      sum1 = fromArray(SPECIES, left, i).mul(fromArray(SPECIES, right, i)).add(sum1);
-      sum2 = fromArray(SPECIES, left, i + width).mul(fromArray(SPECIES, right, i + width)).add(sum2);
-      sum3 = fromArray(SPECIES, left, i + width * 2).mul(fromArray(SPECIES, right, i + width * 2)).add(sum3);
-      sum4 = fromArray(SPECIES, left, i + width * 3).mul(fromArray(SPECIES, right, i + width * 3)).add(sum4);
-    }
-    return sum1.add(sum2).add(sum3).add(sum4).reduceLanes(ADD);
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public double vectorUnrolled4_Preferred() {
+    return vectorDotPreferred(left, right, 0, left.length);
   }
 
   @Benchmark
@@ -182,11 +164,69 @@ public class PanamaBenchmark {
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
-  public double vectorfmaUnrolled4() {
-    return vectorDot(left, right);
+  public double vectorfmaUnrolled4_Preferred() {
+    return vectorDotFMAPreferred(left, right, 0, left.length);
   }
 
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public double vectorUnrolled4_128() {
+    return vectorDot128(left, right, 0, left.length);
+  }
 
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public double vectorfmaUnrolled4_128() {
+    return vectorDotFMA128(left, right, 0, left.length);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public double vectorUnrolled4_256() {
+    return vectorDot256(left, right, 0, left.length);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public double vectorfmaUnrolled4_256() {
+    return vectorDotFMA256(left, right, 0, left.length);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public double vectorUnrolled4_512() {
+    return vectorDot512(left, right, 0, left.length);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public double vectorfmaUnrolled4_512() {
+    return vectorDotFMA512(left, right, 0, left.length);
+  }
 
   /**
    * Compute the dot product of vectors a and b.
@@ -202,9 +242,9 @@ public class PanamaBenchmark {
   /**
    * Compute the dot product of vectors a and b.
    *
-   * @param a The first vector.
-   * @param b The second vector.
-   * @param start The first index to evaluate.
+   * @param a      The first vector.
+   * @param b      The second vector.
+   * @param start  The first index to evaluate.
    * @param length The number of positions to include.
    * @return The dot product.
    */
@@ -243,37 +283,264 @@ public class PanamaBenchmark {
   /**
    * Uses jdk.incubator.vector API to vectorize the dot product.
    *
-   * @param a The first vector.
-   * @param b The second vector.
+   * @param a      The first vector.
+   * @param b      The second vector.
+   * @param start  The first index to evaluate.
+   * @param length The number of positions to include.
    * @return The dot product.
    */
-  public static double vectorDot(double[] a, double[] b) {
-    return vectorDot(a, b, 0, a.length);
+  public static double vectorDotPreferred(double[] a, double[] b, int start, int length) {
+    var sum1 = zero(SPECIES_PREFERRED);
+    var sum2 = zero(SPECIES_PREFERRED);
+    var sum3 = zero(SPECIES_PREFERRED);
+    var sum4 = zero(SPECIES_PREFERRED);
+    int width = SPECIES_PREFERRED.length();
+    int size = start + length;
+    int step = width * 4;
+    int i = start;
+    for (; i <= size - step; i += step) {
+      sum1 = fromArray(SPECIES_PREFERRED, a, i).mul(fromArray(SPECIES_PREFERRED, b, i)).add(sum1);
+      sum2 = fromArray(SPECIES_PREFERRED, a, i + width).mul(fromArray(SPECIES_PREFERRED, b, i + width)).add(sum2);
+      sum3 = fromArray(SPECIES_PREFERRED, a, i + width * 2).mul(fromArray(SPECIES_PREFERRED, b, i + width * 2)).add(sum3);
+      sum4 = fromArray(SPECIES_PREFERRED, a, i + width * 3).mul(fromArray(SPECIES_PREFERRED, b, i + width * 3)).add(sum4);
+    }
+    double vectorSum = sum1.add(sum2).add(sum3).add(sum4).reduceLanes(ADD);
+
+    // Finish up.
+    for (; i < size; i++) {
+      vectorSum = fma(a[i], b[i], vectorSum);
+    }
+
+    return vectorSum;
   }
 
   /**
    * Uses jdk.incubator.vector API to vectorize the dot product.
    *
-   * @param a The first vector.
-   * @param b The second vector.
-   * @param start The first index to evaluate.
+   * @param a      The first vector.
+   * @param b      The second vector.
+   * @param start  The first index to evaluate.
    * @param length The number of positions to include.
    * @return The dot product.
    */
-  public static double vectorDot(double[] a, double[] b, int start, int length) {
-    var sum1 = zero(SPECIES);
-    var sum2 = zero(SPECIES);
-    var sum3 = zero(SPECIES);
-    var sum4 = zero(SPECIES);
-    int width = SPECIES.length();
+  public static double vectorDotFMAPreferred(double[] a, double[] b, int start, int length) {
+    var sum1 = zero(SPECIES_PREFERRED);
+    var sum2 = zero(SPECIES_PREFERRED);
+    var sum3 = zero(SPECIES_PREFERRED);
+    var sum4 = zero(SPECIES_PREFERRED);
+    int width = SPECIES_PREFERRED.length();
     int size = start + length;
     int step = width * 4;
     int i = start;
     for (; i <= size - step; i += step) {
-      sum1 = fromArray(SPECIES, a, i).fma(fromArray(SPECIES, b, i), sum1);
-      sum2 = fromArray(SPECIES, a, i + width).fma(fromArray(SPECIES, b, i + width), sum2);
-      sum3 = fromArray(SPECIES, a, i + width * 2).fma(fromArray(SPECIES, b, i + width * 2), sum3);
-      sum4 = fromArray(SPECIES, a, i + width * 3).fma(fromArray(SPECIES, b, i + width * 3), sum4);
+      sum1 = fromArray(SPECIES_PREFERRED, a, i).fma(fromArray(SPECIES_PREFERRED, b, i), sum1);
+      sum2 = fromArray(SPECIES_PREFERRED, a, i + width).fma(fromArray(SPECIES_PREFERRED, b, i + width), sum2);
+      sum3 = fromArray(SPECIES_PREFERRED, a, i + width * 2).fma(fromArray(SPECIES_PREFERRED, b, i + width * 2), sum3);
+      sum4 = fromArray(SPECIES_PREFERRED, a, i + width * 3).fma(fromArray(SPECIES_PREFERRED, b, i + width * 3), sum4);
+    }
+    double vectorSum = sum1.add(sum2).add(sum3).add(sum4).reduceLanes(ADD);
+
+    // Finish up.
+    for (; i < size; i++) {
+      vectorSum = fma(a[i], b[i], vectorSum);
+    }
+
+    return vectorSum;
+  }
+
+  /**
+   * Uses jdk.incubator.vector API to vectorize the dot product.
+   *
+   * @param a      The first vector.
+   * @param b      The second vector.
+   * @param start  The first index to evaluate.
+   * @param length The number of positions to include.
+   * @return The dot product.
+   */
+  public static double vectorDot128(double[] a, double[] b, int start, int length) {
+    var sum1 = zero(SPECIES_128);
+    var sum2 = zero(SPECIES_128);
+    var sum3 = zero(SPECIES_128);
+    var sum4 = zero(SPECIES_128);
+    int width = SPECIES_128.length();
+    int size = start + length;
+    int step = width * 4;
+    int i = start;
+    for (; i <= size - step; i += step) {
+      sum1 = fromArray(SPECIES_128, a, i).mul(fromArray(SPECIES_128, b, i)).add(sum1);
+      sum2 = fromArray(SPECIES_128, a, i + width).mul(fromArray(SPECIES_128, b, i + width)).add(sum2);
+      sum3 = fromArray(SPECIES_128, a, i + width * 2).mul(fromArray(SPECIES_128, b, i + width * 2)).add(sum3);
+      sum4 = fromArray(SPECIES_128, a, i + width * 3).mul(fromArray(SPECIES_128, b, i + width * 3)).add(sum4);
+    }
+    double vectorSum = sum1.add(sum2).add(sum3).add(sum4).reduceLanes(ADD);
+
+    // Finish up.
+    for (; i < size; i++) {
+      vectorSum = fma(a[i], b[i], vectorSum);
+    }
+
+    return vectorSum;
+  }
+
+  /**
+   * Uses jdk.incubator.vector API to vectorize the dot product.
+   *
+   * @param a      The first vector.
+   * @param b      The second vector.
+   * @param start  The first index to evaluate.
+   * @param length The number of positions to include.
+   * @return The dot product.
+   */
+  public static double vectorDotFMA128(double[] a, double[] b, int start, int length) {
+    var sum1 = zero(SPECIES_128);
+    var sum2 = zero(SPECIES_128);
+    var sum3 = zero(SPECIES_128);
+    var sum4 = zero(SPECIES_128);
+    int width = SPECIES_128.length();
+    int size = start + length;
+    int step = width * 4;
+    int i = start;
+    for (; i <= size - step; i += step) {
+      sum1 = fromArray(SPECIES_128, a, i).fma(fromArray(SPECIES_128, b, i), sum1);
+      sum2 = fromArray(SPECIES_128, a, i + width).fma(fromArray(SPECIES_128, b, i + width), sum2);
+      sum3 = fromArray(SPECIES_128, a, i + width * 2).fma(fromArray(SPECIES_128, b, i + width * 2), sum3);
+      sum4 = fromArray(SPECIES_128, a, i + width * 3).fma(fromArray(SPECIES_128, b, i + width * 3), sum4);
+    }
+    double vectorSum = sum1.add(sum2).add(sum3).add(sum4).reduceLanes(ADD);
+
+    // Finish up.
+    for (; i < size; i++) {
+      vectorSum = fma(a[i], b[i], vectorSum);
+    }
+
+    return vectorSum;
+  }
+
+  /**
+   * Uses jdk.incubator.vector API to vectorize the dot product.
+   *
+   * @param a      The first vector.
+   * @param b      The second vector.
+   * @param start  The first index to evaluate.
+   * @param length The number of positions to include.
+   * @return The dot product.
+   */
+  public static double vectorDot256(double[] a, double[] b, int start, int length) {
+    var sum1 = zero(SPECIES_256);
+    var sum2 = zero(SPECIES_256);
+    var sum3 = zero(SPECIES_256);
+    var sum4 = zero(SPECIES_256);
+    int width = SPECIES_256.length();
+    int size = start + length;
+    int step = width * 4;
+    int i = start;
+    for (; i <= size - step; i += step) {
+      sum1 = fromArray(SPECIES_256, a, i).mul(fromArray(SPECIES_256, b, i)).add(sum1);
+      sum2 = fromArray(SPECIES_256, a, i + width).mul(fromArray(SPECIES_256, b, i + width)).add(sum2);
+      sum3 = fromArray(SPECIES_256, a, i + width * 2).mul(fromArray(SPECIES_256, b, i + width * 2)).add(sum3);
+      sum4 = fromArray(SPECIES_256, a, i + width * 3).mul(fromArray(SPECIES_256, b, i + width * 3)).add(sum4);
+    }
+    double vectorSum = sum1.add(sum2).add(sum3).add(sum4).reduceLanes(ADD);
+
+    // Finish up.
+    for (; i < size; i++) {
+      vectorSum = fma(a[i], b[i], vectorSum);
+    }
+
+    return vectorSum;
+  }
+
+  /**
+   * Uses jdk.incubator.vector API to vectorize the dot product.
+   *
+   * @param a      The first vector.
+   * @param b      The second vector.
+   * @param start  The first index to evaluate.
+   * @param length The number of positions to include.
+   * @return The dot product.
+   */
+  public static double vectorDotFMA256(double[] a, double[] b, int start, int length) {
+    var sum1 = zero(SPECIES_256);
+    var sum2 = zero(SPECIES_256);
+    var sum3 = zero(SPECIES_256);
+    var sum4 = zero(SPECIES_256);
+    int width = SPECIES_256.length();
+    int size = start + length;
+    int step = width * 4;
+    int i = start;
+    for (; i <= size - step; i += step) {
+      sum1 = fromArray(SPECIES_256, a, i).fma(fromArray(SPECIES_256, b, i), sum1);
+      sum2 = fromArray(SPECIES_256, a, i + width).fma(fromArray(SPECIES_256, b, i + width), sum2);
+      sum3 = fromArray(SPECIES_256, a, i + width * 2).fma(fromArray(SPECIES_256, b, i + width * 2), sum3);
+      sum4 = fromArray(SPECIES_256, a, i + width * 3).fma(fromArray(SPECIES_256, b, i + width * 3), sum4);
+    }
+    double vectorSum = sum1.add(sum2).add(sum3).add(sum4).reduceLanes(ADD);
+
+    // Finish up.
+    for (; i < size; i++) {
+      vectorSum = fma(a[i], b[i], vectorSum);
+    }
+
+    return vectorSum;
+  }
+
+  /**
+   * Uses jdk.incubator.vector API to vectorize the dot product.
+   *
+   * @param a      The first vector.
+   * @param b      The second vector.
+   * @param start  The first index to evaluate.
+   * @param length The number of positions to include.
+   * @return The dot product.
+   */
+  public static double vectorDot512(double[] a, double[] b, int start, int length) {
+    var sum1 = zero(SPECIES_512);
+    var sum2 = zero(SPECIES_512);
+    var sum3 = zero(SPECIES_512);
+    var sum4 = zero(SPECIES_512);
+    int width = SPECIES_512.length();
+    int size = start + length;
+    int step = width * 4;
+    int i = start;
+    for (; i <= size - step; i += step) {
+      sum1 = fromArray(SPECIES_512, a, i).mul(fromArray(SPECIES_512, b, i)).add(sum1);
+      sum2 = fromArray(SPECIES_512, a, i + width).mul(fromArray(SPECIES_512, b, i + width)).add(sum2);
+      sum3 = fromArray(SPECIES_512, a, i + width * 2).mul(fromArray(SPECIES_512, b, i + width * 2)).add(sum3);
+      sum4 = fromArray(SPECIES_512, a, i + width * 3).mul(fromArray(SPECIES_512, b, i + width * 3)).add(sum4);
+    }
+    double vectorSum = sum1.add(sum2).add(sum3).add(sum4).reduceLanes(ADD);
+
+    // Finish up.
+    for (; i < size; i++) {
+      vectorSum = fma(a[i], b[i], vectorSum);
+    }
+
+    return vectorSum;
+  }
+
+  /**
+   * Uses jdk.incubator.vector API to vectorize the dot product.
+   *
+   * @param a      The first vector.
+   * @param b      The second vector.
+   * @param start  The first index to evaluate.
+   * @param length The number of positions to include.
+   * @return The dot product.
+   */
+  public static double vectorDotFMA512(double[] a, double[] b, int start, int length) {
+    var sum1 = zero(SPECIES_512);
+    var sum2 = zero(SPECIES_512);
+    var sum3 = zero(SPECIES_512);
+    var sum4 = zero(SPECIES_512);
+    int width = SPECIES_512.length();
+    int size = start + length;
+    int step = width * 4;
+    int i = start;
+    for (; i <= size - step; i += step) {
+      sum1 = fromArray(SPECIES_512, a, i).fma(fromArray(SPECIES_512, b, i), sum1);
+      sum2 = fromArray(SPECIES_512, a, i + width).fma(fromArray(SPECIES_512, b, i + width), sum2);
+      sum3 = fromArray(SPECIES_512, a, i + width * 2).fma(fromArray(SPECIES_512, b, i + width * 2), sum3);
+      sum4 = fromArray(SPECIES_512, a, i + width * 3).fma(fromArray(SPECIES_512, b, i + width * 3), sum4);
     }
     double vectorSum = sum1.add(sum2).add(sum3).add(sum4).reduceLanes(ADD);
 
