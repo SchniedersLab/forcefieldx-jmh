@@ -40,7 +40,7 @@ public class FFTBenchmark {
   /**
    * Perform 3 test measurement iterations
    */
-  private final static int measurementIterations = 3;
+  private final static int measurementIterations = 5;
   /**
    * Each measurement iteration will run for this many seconds.
    */
@@ -209,7 +209,12 @@ public class FFTBenchmark {
   @OutputTimeUnit(NANOSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
-  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  @Fork(value = 1, jvmArgsPrepend = {
+      "--add-modules=jdk.incubator.vector"
+      // "-XX:+UnlockDiagnosticVMOptions",
+      // "-XX:+LogCompilation",
+      // "-XX:CompileCommand=print ffx.numerics.benchmark::floatPass2SIMD"
+  })
   public void Pass2FloatVectorFFTSIMD(FFTState_PassData32 state, Blackhole blackhole) {
     int product = n;
     floatPass2SIMD(product, state.passDataFloat, FFTState_PassData32.twiddles[factors.length - 1]);
@@ -323,7 +328,23 @@ public class FFTBenchmark {
     final int dj = 2 * product_1;
     int i = passDataDouble.inOffset;
     int j = passDataDouble.outOffset;
-    for (int k = 0; k < q; k++, j += dj) {
+
+    // First iteration has no twiddle factors.
+    for (int k1 = 0; k1 < product_1; k1++, i += 2, j += 2) {
+      final double z0_r = data[i];
+      final double z0_i = data[i + 1];
+      final int idi = i + di;
+      final double z1_r = data[idi];
+      final double z1_i = data[idi + 1];
+      ret[j] = z0_r + z1_r;
+      ret[j + 1] = z0_i + z1_i;
+      final int jdj = j + dj;
+      ret[jdj] = z0_r - z1_r;
+      ret[jdj + 1] = z0_i - z1_i;
+    }
+
+    j += dj;
+    for (int k = 1; k < q; k++, j += dj) {
       final double[] twids = twiddles[k];
       final double w_r = twids[0];
       final double w_i = -sign * twids[1];
@@ -357,22 +378,36 @@ public class FFTBenchmark {
     int j = passDataDouble.outOffset;
     final int dataInc = DOUBLE_SPECIES.length();
     final int k1inc = dataInc / 2;
-    for (int k = 0; k < q; k++, j += dj) {
+
+    // First iteration has no twiddle factors.
+    for (int k1 = 0; k1 < product_1; k1 += k1inc, i += dataInc, j += dataInc) {
+      final int idi = i + di;
+      final int jdj = j + dj;
+      DoubleVector z0 = DoubleVector.fromArray(DOUBLE_SPECIES, data, i);
+      DoubleVector z1 = DoubleVector.fromArray(DOUBLE_SPECIES, data, idi);
+      z0.add(z1).intoArray(ret, j);
+      z0.sub(z1).intoArray(ret, jdj);
+    }
+
+    j += dj;
+    for (int k = 1; k < q; k++, j += dj) {
       final double[] twids = twiddles[k];
       DoubleVector
           w_r = DoubleVector.broadcast(DOUBLE_SPECIES, twids[0]),
           w_i = DoubleVector.broadcast(DOUBLE_SPECIES, -sign * twids[1]).mul(negateIm);
       for (int k1 = 0; k1 < product_1; k1 += k1inc, i += dataInc, j += dataInc) {
-        DoubleVector
-            z0 = DoubleVector.fromArray(DOUBLE_SPECIES, data, i),
-            z1 = DoubleVector.fromArray(DOUBLE_SPECIES, data, i + di),
-            sum = z0.add(z1),
-            x = z0.sub(z1),
-            xw_i = x.mul(w_i),
-            sum2 = x.mul(w_r).add(xw_i.rearrange(pass2ShuffleDouble));
-            // sum2 = x.mul(w_r).add(xw_i);
+        final int idi = i + di;
+        final int jdj = j + dj;
+        DoubleVector z0 = DoubleVector.fromArray(DOUBLE_SPECIES, data, i);
+        DoubleVector z1 = DoubleVector.fromArray(DOUBLE_SPECIES, data, idi);
+        DoubleVector x = z0.sub(z1);
+        DoubleVector xw_r = x.mul(w_r);
+        DoubleVector xw_i = x.mul(w_i);
+        xw_i = xw_i.rearrange(pass2ShuffleDouble);
+        DoubleVector sum = z0.add(z1);
         sum.intoArray(ret, j);
-        sum2.intoArray(ret, j + dj);
+        DoubleVector sum2 = xw_r.add(xw_i);
+        sum2.intoArray(ret, jdj);
       }
     }
   }
@@ -388,7 +423,22 @@ public class FFTBenchmark {
     final int dj = 2 * product_1;
     int i = passData64.inOffset;
     int j = passData64.outOffset;
-    for (int k = 0; k < q; k++, j += dj) {
+
+    for (int k1 = 0; k1 < product_1; k1++, i += 2, j += 2) {
+      final float z0_r = data[i];
+      final float z0_i = data[i + 1];
+      final int idi = i + di;
+      final float z1_r = data[idi];
+      final float z1_i = data[idi + 1];
+      ret[j] = z0_r + z1_r;
+      ret[j + 1] = z0_i + z1_i;
+      final int jdj = j + dj;
+      ret[jdj] = z0_r - z1_r;
+      ret[jdj + 1] = z0_i - z1_i;
+    }
+
+    j += dj;
+    for (int k = 1; k < q; k++, j += dj) {
       final float[] twids = twiddles[k];
       final float w_r = twids[0];
       final float w_i = -sign * twids[1];
@@ -422,22 +472,33 @@ public class FFTBenchmark {
     int j = passData64.outOffset;
     final int dataInc = FLOAT_SPECIES.length();
     final int k1inc = dataInc / 2;
-    for (int k = 0; k < q; k++, j += dj) {
+
+    // First iteration has no twiddle factors.
+    for (int k1 = 0; k1 < product_1; k1 += k1inc, i += dataInc, j += dataInc) {
+      final int idi = i + di;
+      final int jdj = j + dj;
+      FloatVector z0 = FloatVector.fromArray(FLOAT_SPECIES, data, i);
+      FloatVector z1 = FloatVector.fromArray(FLOAT_SPECIES, data, idi);
+      z0.add(z1).intoArray(ret, j);
+      z0.sub(z1).intoArray(ret, jdj);
+    }
+
+    j += dj;
+    for (int k = 1; k < q; k++, j += dj) {
       final float[] twids = twiddles[k];
-      FloatVector
-          w_r = FloatVector.broadcast(FLOAT_SPECIES, twids[0]),
-          w_i = FloatVector.broadcast(FLOAT_SPECIES, -sign * twids[1]).mul(negateImFloat);
+      FloatVector w_r = FloatVector.broadcast(FLOAT_SPECIES, twids[0]);
+      FloatVector w_i = FloatVector.broadcast(FLOAT_SPECIES, -sign * twids[1]).mul(negateImFloat);
       for (int k1 = 0; k1 < product_1; k1 += k1inc, i += dataInc, j += dataInc) {
-        FloatVector
-            z0 = FloatVector.fromArray(FLOAT_SPECIES, data, i),
-            z1 = FloatVector.fromArray(FLOAT_SPECIES, data, i + di),
-            sum = z0.add(z1),
-            x = z0.sub(z1),
-            xw_i = x.mul(w_i),
-            sum2 = x.mul(w_r).add(xw_i.rearrange(pass2ShuffleFloat));
-            // sum2 = x.mul(w_r).add(xw_i);
+        final int idi = i + di;
+        final int jdj = j + dj;
+        FloatVector z0 = FloatVector.fromArray(FLOAT_SPECIES, data, i);
+        FloatVector z1 = FloatVector.fromArray(FLOAT_SPECIES, data, idi);
+        FloatVector sum = z0.add(z1);
         sum.intoArray(ret, j);
-        sum2.intoArray(ret, j + dj);
+        FloatVector x = z0.sub(z1);
+        // FloatVector sum2 = x.fma(w_r, x.mul(w_i).rearrange(pass2ShuffleFloat));
+        FloatVector sum2 = x.fma(w_r, x.mul(w_i));
+        sum2.intoArray(ret, jdj);
       }
     }
   }
