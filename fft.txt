@@ -1,0 +1,27 @@
+Benchmark                              Mode  Cnt      Score     Error  Units
+FFTBenchmark.Complex128                avgt    5    642.638 ±  14.214  ns/op
+FFTBenchmark.Complex128SIMD            avgt    5  12229.005 ± 434.105  ns/op
+FFTBenchmark.Complex256                avgt    5   1285.123 ±  10.697  ns/op
+FFTBenchmark.Complex256SIMD            avgt    5  27233.214 ± 871.459  ns/op
+FFTBenchmark.Complex32                 avgt    5    159.084 ±   2.079  ns/op
+FFTBenchmark.Complex32SIMD             avgt    5   2252.298 ±  38.847  ns/op
+FFTBenchmark.Complex64                 avgt    5    308.498 ±   9.643  ns/op
+FFTBenchmark.Complex64SIMD             avgt    5   5332.768 ±  38.145  ns/op
+FFTBenchmark.Pass2DoubleVectorFFT      avgt    5     66.566 ±   0.613  ns/op
+FFTBenchmark.Pass2DoubleVectorFFTSIMD  avgt    5   1709.108 ±  50.429  ns/op
+FFTBenchmark.Pass2FloatVectorFFT       avgt    5     65.748 ±   0.288  ns/op
+FFTBenchmark.Pass2FloatVectorFFTSIMD   avgt    5     36.842 ±   0.176  ns/op
+
+Benchmark                              Mode  Cnt      Score     Error  Units
+FFTBenchmark.Complex128                avgt    5    614.276 ±  17.971  ns/op
+FFTBenchmark.Complex128SIMD            avgt    5   9143.564 ± 203.730  ns/op
+FFTBenchmark.Complex256                avgt    5   1248.167 ±  74.988  ns/op
+FFTBenchmark.Complex256SIMD            avgt    5  21397.882 ± 954.368  ns/op
+FFTBenchmark.Complex32                 avgt    5    158.417 ±   7.896  ns/op
+FFTBenchmark.Complex32SIMD             avgt    5   1455.990 ±  34.034  ns/op
+FFTBenchmark.Complex64                 avgt    5    295.157 ±  16.187  ns/op
+FFTBenchmark.Complex64SIMD             avgt    5   3781.208 ± 107.441  ns/op
+FFTBenchmark.Pass2DoubleVectorFFT      avgt    5     69.962 ±   0.485  ns/op
+FFTBenchmark.Pass2DoubleVectorFFTSIMD  avgt    5     28.419 ±   0.954  ns/op
+FFTBenchmark.Pass2FloatVectorFFT       avgt    5     70.100 ±   0.225  ns/op
+FFTBenchmark.Pass2FloatVectorFFTSIMD   avgt    5     17.219 ±   0.093  ns/op

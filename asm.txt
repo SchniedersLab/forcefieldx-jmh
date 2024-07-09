@@ -1,0 +1,47 @@
+FloatVector
+
+            0x000000010d0b3820:   ldr   q16, [x27, #32]             ;*invokestatic load {reexecute=0 rethrow=0 return_oop=0}
+                                                                      ; - jdk.incubator.vector.FloatVector::fromArray@24 (line 2799)
+                                                                      ; - ffx.numerics.benchmark.FFTBenchmark::floatPass2SIMD@154 (line 438)
+   4.92%    0x000000010d0b3824:   ldr   q17, [x26, #544]            ;*invokestatic load {reexecute=0 rethrow=0 return_oop=0}
+                                                                      ; - jdk.incubator.vector.FloatVector::fromArray@24 (line 2799)
+                                                                      ; - ffx.numerics.benchmark.FFTBenchmark::floatPass2SIMD@166 (line 439)
+            0x000000010d0b3828:   fsub  v18.4s, v16.4s, v17.4s      ;*invokestatic binaryOp {reexecute=0 rethrow=0 return_oop=0}
+                                                                      ; - jdk.incubator.vector.FloatVector::sub@5 (line 1298)
+                                                                      ; - ffx.numerics.benchmark.FFTBenchmark::floatPass2SIMD@175 (line 440)
+   0.07%    0x000000010d0b382c:   fadd  v16.4s, v16.4s, v17.4s
+   1.42%    0x000000010d0b3830:   fmul  v17.4s, v18.4s, v19.4s
+            0x000000010d0b3834:   fmul  v18.4s, v18.4s, v20.4s      ;*invokestatic store {reexecute=0 rethrow=0 return_oop=0}
+                                                                      ; - jdk.incubator.vector.FloatVector::intoArray@44 (line 3068)
+                                                                      ; - ffx.numerics.benchmark.FFTBenchmark::floatPass2SIMD@231 (line 447)
+   2.17%    0x000000010d0b3838:   str   q16, [x29, #32]             ;*invokestatic store {reexecute=0 rethrow=0 return_oop=0}
+                                                                      ; - jdk.incubator.vector.FloatVector::intoArray@44 (line 3068)
+                                                                      ; - ffx.numerics.benchmark.FFTBenchmark::floatPass2SIMD@222 (line 446)
+            0x000000010d0b383c:   fadd  v16.4s, v18.4s, v17.4s
+   0.17%    0x000000010d0b3840:   str   q16, [x4, #32]              ;*invokestatic store {reexecute=0 rethrow=0 return_oop=0}
+                                                                      ; - jdk.incubator.vector.FloatVector::intoArray@44 (line 3068)
+                                                                      ; - ffx.numerics.benchmark.FFTBenchmark::floatPass2SIMD@231 (line 447)
+
+
+DoubleVector
+   1.52%    0x000000010f169ff0:   ldr   q16, [x27, #32]             ;*invokestatic load {reexecute=0 rethrow=0 return_oop=0}
+                                                                      ; - jdk.incubator.vector.DoubleVector::fromArray@24 (line 2775)
+                                                                      ; - ffx.numerics.benchmark.FFTBenchmark::doublePass2SIMD@154 (line 373)
+   3.21%    0x000000010f169ff4:   ldr   q17, [x25, #1056]           ;*invokestatic load {reexecute=0 rethrow=0 return_oop=0}
+                                                                      ; - jdk.incubator.vector.DoubleVector::fromArray@24 (line 2775)
+                                                                      ; - ffx.numerics.benchmark.FFTBenchmark::doublePass2SIMD@166 (line 374)
+   1.73%    0x000000010f169ff8:   fsub  v18.2d, v16.2d, v17.2d      ;*invokestatic binaryOp {reexecute=0 rethrow=0 return_oop=0}
+                                                                      ; - jdk.incubator.vector.DoubleVector::sub@5 (line 1298)
+                                                                      ; - ffx.numerics.benchmark.FFTBenchmark::doublePass2SIMD@175 (line 375)
+   1.18%    0x000000010f169ffc:   fadd  v16.2d, v16.2d, v17.2d
+   1.29%    0x000000010f16a000:   fmul  v17.2d, v18.2d, v19.2d
+   0.64%    0x000000010f16a004:   fmul  v18.2d, v18.2d, v20.2d      ;*invokestatic store {reexecute=0 rethrow=0 return_oop=0}
+                                                                      ; - jdk.incubator.vector.DoubleVector::intoArray@44 (line 3062)
+                                                                      ; - ffx.numerics.benchmark.FFTBenchmark::doublePass2SIMD@231 (line 382)
+   4.16%    0x000000010f16a008:   str   q16, [x29, #32]             ;*invokestatic store {reexecute=0 rethrow=0 return_oop=0}
+                                                                      ; - jdk.incubator.vector.DoubleVector::intoArray@44 (line 3062)
+                                                                      ; - ffx.numerics.benchmark.FFTBenchmark::doublePass2SIMD@213 (line 380)
+   0.34%    0x000000010f16a00c:   fadd  v16.2d, v18.2d, v17.2d
+   2.74%    0x000000010f16a010:   str   q16, [x4, #32]              ;*invokestatic store {reexecute=0 rethrow=0 return_oop=0}
+                                                                      ; - jdk.incubator.vector.DoubleVector::intoArray@44 (line 3062)
+                                                                      ; - ffx.numerics.benchmark.FFTBenchmark::doublePass2SIMD@231 (line 382)

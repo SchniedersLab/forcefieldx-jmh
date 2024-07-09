@@ -175,8 +175,12 @@ public class FFTBenchmark {
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
   public void Pass2DoubleVectorFFT(FFTState_PassData64 state, Blackhole blackhole) {
-    int product = n;
-    doublePass2(product, state.passDataDouble, FFTState_PassData64.twiddles[factors.length - 1]);
+    int product = 2;
+    for (int i = 1; i < factors.length; i++) {
+      int factor = factors[i];
+      product *= factor;
+      doublePass2(product, state.passDataDouble, FFTState_PassData64.twiddles[i]);
+    }
     blackhole.consume(state.passDataDouble.out);
   }
 
@@ -187,8 +191,40 @@ public class FFTBenchmark {
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
   public void Pass2DoubleVectorFFTSIMD(FFTState_PassData64 state, Blackhole blackhole) {
-    int product = n;
-    doublePass2SIMD(product, state.passDataDouble, FFTState_PassData64.twiddles[factors.length - 1]);
+    int product = 2;
+    for (int i = 1; i < factors.length; i++) {
+      int factor = factors[i];
+      product *= factor;
+      doublePass2SIMD(product, state.passDataDouble, FFTState_PassData64.twiddles[i]);
+    }
+    blackhole.consume(state.passDataDouble.out);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Pass2DoubleVectorFFTSIMDBlocked(FFTState_PassData64 state, Blackhole blackhole) {
+    int product = 2;
+    // From interleaved to packed.
+//    double[] in = state.in;
+//    double[] out = state.out;
+//    int len = in.length;
+//    for (int iin = 0, kout = 0; iin < len; iin+=2, kout += 1) {
+//      double re = in[iin];
+//      double im = in[iin + 1];
+//      out[kout] = re;
+//      out[kout + n] = im;
+//    }
+//    state.in = out;
+//    state.out = in;
+    for (int i = 1; i < factors.length; i++) {
+      int factor = factors[i];
+      product *= factor;
+      doublePass2SIMDBlocked(product, state.passDataDouble, FFTState_PassData64.twiddles[i]);
+    }
     blackhole.consume(state.passDataDouble.out);
   }
 
@@ -199,8 +235,12 @@ public class FFTBenchmark {
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
   public void Pass2FloatVectorFFT(FFTState_PassData32 state, Blackhole blackhole) {
-    int product = n;
-    floatPass2(product, state.passDataFloat, FFTState_PassData32.twiddles[factors.length - 1]);
+    int product = 2;
+    for (int i = 1; i < factors.length; i++) {
+      int factor = factors[i];
+      product *= factor;
+      floatPass2(product, state.passDataFloat, FFTState_PassData32.twiddles[i]);
+    }
     blackhole.consume(state.passDataFloat.out);
   }
 
@@ -216,8 +256,12 @@ public class FFTBenchmark {
       // "-XX:CompileCommand=print ffx.numerics.benchmark::floatPass2SIMD"
   })
   public void Pass2FloatVectorFFTSIMD(FFTState_PassData32 state, Blackhole blackhole) {
-    int product = n;
-    floatPass2SIMD(product, state.passDataFloat, FFTState_PassData32.twiddles[factors.length - 1]);
+    int product = 2;
+    for (int i = 1; i < factors.length; i++) {
+      int factor = factors[i];
+      product *= factor;
+      floatPass2SIMD(product, state.passDataFloat, FFTState_PassData32.twiddles[i]);
+    }
     blackhole.consume(state.passDataFloat.out);
   }
 
@@ -370,17 +414,26 @@ public class FFTBenchmark {
     final double[] ret = passDataDouble.out;
     final int factor = 2;
     final int m = n / factor;
-    final int q = n / product;
-    final int product_1 = product / factor;
-    final int di = 2 * m;
-    final int dj = 2 * product_1;
-    int i = passDataDouble.inOffset;
-    int j = passDataDouble.outOffset;
+    final int outerLoopLimit = n / product;
+    final int innerLoopLimit = product / factor;
     final int dataInc = DOUBLE_SPECIES.length();
     final int k1inc = dataInc / 2;
 
+    if (innerLoopLimit % k1inc != 0) {
+      // System.out.printf("Scalar %d product=%d innerLoopLimit=%d increment=%d%n",
+      // factor, product, innerLoopLimit, LOOP_INCREMENT);
+      doublePass2(product, passDataDouble, twiddles);
+      return;
+    }
+
+    final int di = 2 * m;
+    final int dj = 2 * innerLoopLimit;
+    int i = passDataDouble.inOffset;
+    int j = passDataDouble.outOffset;
+
+
     // First iteration has no twiddle factors.
-    for (int k1 = 0; k1 < product_1; k1 += k1inc, i += dataInc, j += dataInc) {
+    for (int k1 = 0; k1 < innerLoopLimit; k1 += k1inc, i += dataInc, j += dataInc) {
       final int idi = i + di;
       final int jdj = j + dj;
       DoubleVector z0 = DoubleVector.fromArray(DOUBLE_SPECIES, data, i);
@@ -390,12 +443,12 @@ public class FFTBenchmark {
     }
 
     j += dj;
-    for (int k = 1; k < q; k++, j += dj) {
+    for (int k = 1; k < outerLoopLimit; k++, j += dj) {
       final double[] twids = twiddles[k];
       DoubleVector
           w_r = DoubleVector.broadcast(DOUBLE_SPECIES, twids[0]),
           w_i = DoubleVector.broadcast(DOUBLE_SPECIES, -sign * twids[1]).mul(negateIm);
-      for (int k1 = 0; k1 < product_1; k1 += k1inc, i += dataInc, j += dataInc) {
+      for (int k1 = 0; k1 < innerLoopLimit; k1 += k1inc, i += dataInc, j += dataInc) {
         final int idi = i + di;
         final int jdj = j + dj;
         DoubleVector z0 = DoubleVector.fromArray(DOUBLE_SPECIES, data, i);
@@ -412,17 +465,80 @@ public class FFTBenchmark {
     }
   }
 
-  private void floatPass2(int product, PassDataFloat passData64, float[][] twiddles) {
-    final float[] data = passData64.in;
-    final float[] ret = passData64.out;
+  private void doublePass2SIMDBlocked(int product, PassDataDouble passDataDouble, double[][] twiddles) {
+    final double[] data = passDataDouble.in;
+    final double[] ret = passDataDouble.out;
+    final int factor = 2;
+    final int innerLoopLimit = product / factor;
+
+    // Number of complex number processed in one pass.
+    final int k1inc = DOUBLE_SPECIES.length();
+    // Collect a vector of set of real and imaginary parts each inner loop cycle.
+    final int dataInc = DOUBLE_SPECIES.length();
+
+    if (innerLoopLimit % k1inc != 0) {
+      // System.out.printf("Scalar %d product=%d innerLoopLimit=%d increment=%d%n",
+      // factor, product, innerLoopLimit, LOOP_INCREMENT);
+      doublePass2(product, passDataDouble, twiddles);
+      return;
+    }
+
+    final int m = n / factor;
+    final int outerLoopLimit = n / product;
+    final int di = 2 * m;
+    final int dj = 2 * innerLoopLimit;
+    int i = passDataDouble.inOffset;
+    int j = passDataDouble.outOffset;
+    int imOffset = n / 2;
+
+    // First iteration has no twiddle factors.
+    for (int k1 = 0; k1 < innerLoopLimit; k1 += k1inc, i += dataInc, j += dataInc) {
+      DoubleVector z0_r = DoubleVector.fromArray(DOUBLE_SPECIES, data, i);
+      DoubleVector z0_i = DoubleVector.fromArray(DOUBLE_SPECIES, data, i + imOffset);
+      final int idi = i + di;
+      DoubleVector z1_r = DoubleVector.fromArray(DOUBLE_SPECIES, data, idi);
+      DoubleVector z1_i = DoubleVector.fromArray(DOUBLE_SPECIES, data, idi + imOffset);
+      z0_r.add(z1_r).intoArray(ret, j);
+      z0_i.add(z1_i).intoArray(ret, j + imOffset);
+      final int jdj = j + dj;
+      z0_r.sub(z1_r).intoArray(ret, jdj);
+      z0_i.sub(z1_i).intoArray(ret, jdj + imOffset);
+    }
+
+    j += dj;
+    for (int k = 1; k < outerLoopLimit; k++, j += dj) {
+      final double[] twids = twiddles[k];
+      DoubleVector
+          w_r = DoubleVector.broadcast(DOUBLE_SPECIES, twids[0]),
+          w_i = DoubleVector.broadcast(DOUBLE_SPECIES, -sign * twids[1]);
+      for (int k1 = 0; k1 < innerLoopLimit; k1 += dataInc, i += dataInc, j += dataInc) {
+        DoubleVector z0_r = DoubleVector.fromArray(DOUBLE_SPECIES, data, i);
+        DoubleVector z0_i = DoubleVector.fromArray(DOUBLE_SPECIES, data, i + imOffset);
+        final int idi = i + di;
+        DoubleVector z1_r = DoubleVector.fromArray(DOUBLE_SPECIES, data, idi);
+        DoubleVector z1_i = DoubleVector.fromArray(DOUBLE_SPECIES, data, idi + imOffset);
+        z0_r.add(z1_r).intoArray(ret, j);
+        z0_i.add(z1_i).intoArray(ret, j + imOffset);
+        DoubleVector x_r = z0_r.sub(z1_r);
+        DoubleVector x_i = z0_i.sub(z1_i);
+        final int jdj = j + dj;
+        w_r.fma(x_r, w_i.neg().mul(x_i)).intoArray(ret, jdj);
+        w_r.fma(x_i, w_i.mul(x_r)).intoArray(ret, jdj + imOffset);
+      }
+    }
+  }
+
+  private void floatPass2(int product, PassDataFloat passData32, float[][] twiddles) {
+    final float[] data = passData32.in;
+    final float[] ret = passData32.out;
     final int factor = 2;
     final int m = n / factor;
     final int q = n / product;
     final int product_1 = product / factor;
     final int di = 2 * m;
     final int dj = 2 * product_1;
-    int i = passData64.inOffset;
-    int j = passData64.outOffset;
+    int i = passData32.inOffset;
+    int j = passData32.outOffset;
 
     for (int k1 = 0; k1 < product_1; k1++, i += 2, j += 2) {
       final float z0_r = data[i];
@@ -459,22 +575,30 @@ public class FFTBenchmark {
     }
   }
 
-  private void floatPass2SIMD(int product, PassDataFloat passData64, float[][] twiddles) {
-    final float[] data = passData64.in;
-    final float[] ret = passData64.out;
+  private void floatPass2SIMD(int product, PassDataFloat passData32, float[][] twiddles) {
+    final float[] data = passData32.in;
+    final float[] ret = passData32.out;
     final int factor = 2;
     final int m = n / factor;
-    final int q = n / product;
-    final int product_1 = product / factor;
-    final int di = 2 * m;
-    final int dj = 2 * product_1;
-    int i = passData64.inOffset;
-    int j = passData64.outOffset;
+    final int outerLoopLimit = n / product;
+    final int innerLoopLimit = product / factor;
     final int dataInc = FLOAT_SPECIES.length();
     final int k1inc = dataInc / 2;
 
+    if (innerLoopLimit % k1inc != 0) {
+      System.out.printf("Scalar %d product=%d inner loop limit=%d loop increment=%d%n",
+          factor, product, innerLoopLimit, k1inc);
+      floatPass2(product, passData32, twiddles);
+      return;
+    }
+
+    final int di = 2 * m;
+    final int dj = 2 * innerLoopLimit;
+    int i = passData32.inOffset;
+    int j = passData32.outOffset;
+
     // First iteration has no twiddle factors.
-    for (int k1 = 0; k1 < product_1; k1 += k1inc, i += dataInc, j += dataInc) {
+    for (int k1 = 0; k1 < innerLoopLimit; k1 += k1inc, i += dataInc, j += dataInc) {
       final int idi = i + di;
       final int jdj = j + dj;
       FloatVector z0 = FloatVector.fromArray(FLOAT_SPECIES, data, i);
@@ -484,11 +608,11 @@ public class FFTBenchmark {
     }
 
     j += dj;
-    for (int k = 1; k < q; k++, j += dj) {
+    for (int k = 1; k < outerLoopLimit; k++, j += dj) {
       final float[] twids = twiddles[k];
       FloatVector w_r = FloatVector.broadcast(FLOAT_SPECIES, twids[0]);
       FloatVector w_i = FloatVector.broadcast(FLOAT_SPECIES, -sign * twids[1]).mul(negateImFloat);
-      for (int k1 = 0; k1 < product_1; k1 += k1inc, i += dataInc, j += dataInc) {
+      for (int k1 = 0; k1 < innerLoopLimit; k1 += k1inc, i += dataInc, j += dataInc) {
         final int idi = i + di;
         final int jdj = j + dj;
         FloatVector z0 = FloatVector.fromArray(FLOAT_SPECIES, data, i);
@@ -496,8 +620,7 @@ public class FFTBenchmark {
         FloatVector sum = z0.add(z1);
         sum.intoArray(ret, j);
         FloatVector x = z0.sub(z1);
-        // FloatVector sum2 = x.fma(w_r, x.mul(w_i).rearrange(pass2ShuffleFloat));
-        FloatVector sum2 = x.fma(w_r, x.mul(w_i));
+        FloatVector sum2 = x.fma(w_r, x.mul(w_i).rearrange(pass2ShuffleFloat));
         sum2.intoArray(ret, jdj);
       }
     }
