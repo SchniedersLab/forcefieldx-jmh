@@ -62,10 +62,24 @@ public class PanamaBenchmark {
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
-  public double vanilla() {
+  public double scalarDotProduct() {
     double sum = 0f;
     for (int i = 0; i < size; ++i) {
       sum += left[i] * right[i];
+    }
+    return sum;
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public double scalarDotProductFMA() {
+    double sum = 0f;
+    for (int i = 0; i < size; ++i) {
+      sum = fma(left[i], right[i], sum);
     }
     return sum;
   }
@@ -79,7 +93,53 @@ public class PanamaBenchmark {
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
-  public double unrolled8() {
+  public double scalarDotProductUnrolled4() {
+    double s0 = 0f;
+    double s1 = 0f;
+    double s2 = 0f;
+    double s3 = 0f;
+    for (int i = 0; i < size; i += 4) {
+      s0 += left[i + 0] * right[i + 0];
+      s1 += left[i + 1] * right[i + 1];
+      s2 += left[i + 2] * right[i + 2];
+      s3 += left[i + 3] * right[i + 3];
+    }
+    return s0 + s1 + s2 + s3;
+  }
+
+  /**
+   * 4 vs. 8 in the loop give similar timings.
+   */
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public double scalarDotProductUnrolled4FMA() {
+    double s0 = 0f;
+    double s1 = 0f;
+    double s2 = 0f;
+    double s3 = 0f;
+    for (int i = 0; i < size; i += 4) {
+      s0 = fma(left[i + 0], right[i + 0], s0);
+      s1 = fma(left[i + 1], right[i + 1], s1);
+      s2 = fma(left[i + 2], right[i + 2], s2);
+      s3 = fma(left[i + 3], right[i + 3], s3);
+    }
+    return s0 + s1 + s2 + s3;
+  }
+
+  /**
+   * 4 vs. 8 in the loop give similar timings.
+   */
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public double scalarDotProductUnrolled8() {
     double s0 = 0f;
     double s1 = 0f;
     double s2 = 0f;
@@ -107,7 +167,7 @@ public class PanamaBenchmark {
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
-  public double unrolledfma8() {
+  public double scalarDotProductUnrolled8FMA() {
     return dot(left, right);
   }
 
@@ -164,7 +224,7 @@ public class PanamaBenchmark {
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
-  public double vectorfmaUnrolled4_Preferred() {
+  public double vectorUnrolled4_PreferredFMA() {
     return vectorDotFMAPreferred(left, right, 0, left.length);
   }
 
@@ -184,7 +244,7 @@ public class PanamaBenchmark {
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
-  public double vectorfmaUnrolled4_128() {
+  public double vectorUnrolled4_128FMA() {
     return vectorDotFMA128(left, right, 0, left.length);
   }
 
@@ -204,7 +264,7 @@ public class PanamaBenchmark {
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
-  public double vectorfmaUnrolled4_256() {
+  public double vectorUnrolled4_256FMA() {
     return vectorDotFMA256(left, right, 0, left.length);
   }
 
@@ -224,7 +284,7 @@ public class PanamaBenchmark {
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
-  public double vectorfmaUnrolled4_512() {
+  public double vectorUnrolled4_512FMA() {
     return vectorDotFMA512(left, right, 0, left.length);
   }
 
