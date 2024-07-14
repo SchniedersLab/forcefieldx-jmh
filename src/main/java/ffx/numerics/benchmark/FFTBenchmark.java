@@ -5,6 +5,7 @@ import edu.rit.pj.ParallelTeam;
 import ffx.numerics.fft.Complex;
 import ffx.numerics.fft.Complex3DParallel;
 import ffx.numerics.fft.DataLayout1D;
+import jdk.incubator.vector.DoubleVector;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -47,6 +48,8 @@ import static org.openjdk.jmh.annotations.Mode.AverageTime;
  */
 public class FFTBenchmark {
 
+  private static final int SPECIES_LENGTH = DoubleVector.SPECIES_PREFERRED.length();
+
   /**
    * Perform 2 test warm-up iterations
    */
@@ -69,6 +72,9 @@ public class FFTBenchmark {
   public static final double[] inDouble128 = new double[128 * 2];
   public static final double[] inDouble256 = new double[256 * 2];
 
+  public static final double[] inDouble256_SPECIES_BLOCKED = new double[256 * 2 * SPECIES_LENGTH];
+  public static final double[] inDouble256_SPECIES_INTERLEAVED = new double[256 * 2 * SPECIES_LENGTH];
+
   // Initialize the input arrays with random values.
   static {
     Random random = new Random(1);
@@ -83,6 +89,16 @@ public class FFTBenchmark {
     }
     for (int i = 0; i < 256; i++) {
       inDouble256[i * 2] = random.nextDouble();
+    }
+    for (int f = 0; f < SPECIES_LENGTH; f++) {
+      // Blocked
+      for (int i = 0; i < 256; i++) {
+        inDouble256_SPECIES_BLOCKED[i + f * SPECIES_LENGTH] = random.nextDouble();
+      }
+      // Interleaved
+      for (int i = 0; i < 256; i++) {
+        inDouble256_SPECIES_INTERLEAVED[i * 2 + f * SPECIES_LENGTH] = random.nextDouble();
+      }
     }
   }
 
@@ -139,6 +155,21 @@ public class FFTBenchmark {
   public static class Complex256Blocked {
     Complex complex = new Complex(256, DataLayout1D.BLOCKED, 256);
     double[] in = Arrays.copyOf(inDouble256, inDouble256.length);
+  }
+
+  @State(Scope.Thread)
+  public static class Complex256InterleavedNFFT {
+    Complex complex = new Complex(256, DataLayout1D.INTERLEAVED, 256, SPECIES_LENGTH);
+    double[] in = Arrays.copyOf(inDouble256_SPECIES_INTERLEAVED, inDouble256_SPECIES_INTERLEAVED.length);
+  }
+
+  @State(Scope.Thread)
+  public static class Complex256BlockedNFFT {
+    Complex complex = new Complex(256, DataLayout1D.BLOCKED, 256, SPECIES_LENGTH);
+    double[] in = Arrays.copyOf(inDouble256_SPECIES_BLOCKED, inDouble256_SPECIES_BLOCKED.length);
+    static {
+      System.out.println("SPECIES_LENGTH = " + SPECIES_LENGTH);
+    }
   }
 
   @Benchmark
@@ -501,4 +532,55 @@ public class FFTBenchmark {
     blackhole.consume(state.in);
   }
 
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex256InterleavedNFFT(Complex256InterleavedNFFT state, Blackhole blackhole) {
+    int nextFFT = 256 * 2;
+    state.complex.setUseSIMD(false);
+    state.complex.fft(state.in, 0, 2, nextFFT);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex256BlockedNFFT(Complex256BlockedNFFT state, Blackhole blackhole) {
+    int nextFFT = 256 * 2;
+    state.complex.setUseSIMD(false);
+    state.complex.fft(state.in, 0, 1, nextFFT);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex256SIMDInterleavedNFFT(Complex256InterleavedNFFT state, Blackhole blackhole) {
+    int nextFFT = 256 * 2;
+    state.complex.setUseSIMD(true);
+    state.complex.fft(state.in, 0, 2, nextFFT);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex256SIMDBlockedNFFT(Complex256BlockedNFFT state, Blackhole blackhole) {
+    int nextFFT = 256 * 2;
+    state.complex.setUseSIMD(true);
+    state.complex.fft(state.in, 0, 1, nextFFT);
+    blackhole.consume(state.in);
+  }
 }
