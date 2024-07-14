@@ -1,17 +1,33 @@
+MacOS M2
+Benchmark                                  Mode  Cnt      Score     Error  Units
+FFTBenchmark.Complex032                    avgt    5    155.362 ±   4.438  ns/op
+FFTBenchmark.Complex032Blocked             avgt    5    153.663 ±   3.515  ns/op
+FFTBenchmark.Complex032SIMD                avgt    5   1461.293 ±  21.067  ns/op
+FFTBenchmark.Complex032SIMDBlocked         avgt    5    132.840 ±   3.790  ns/op
+FFTBenchmark.Complex064                    avgt    5    289.755 ±   9.978  ns/op
+FFTBenchmark.Complex064Blocked             avgt    5    291.017 ±   9.729  ns/op
+FFTBenchmark.Complex064SIMD                avgt    5   3839.788 ± 329.260  ns/op
+FFTBenchmark.Complex064SIMDBlocked         avgt    5    268.207 ±   8.906  ns/op
+FFTBenchmark.Complex128                    avgt    5    692.140 ±   5.934  ns/op
+FFTBenchmark.Complex128Blocked             avgt    5    691.940 ±  10.137  ns/op
+FFTBenchmark.Complex128SIMD                avgt    5   9110.046 ±  48.361  ns/op
+FFTBenchmark.Complex128SIMDBlocked         avgt    5    544.160 ±   9.524  ns/op
+FFTBenchmark.Complex128SIMDBlockedLoop004  avgt    5    523.430 ±  11.662  ns/op
+FFTBenchmark.Complex128SIMDBlockedLoop008  avgt    5    517.613 ±   9.568  ns/op
+FFTBenchmark.Complex128SIMDBlockedLoop016  avgt    5    519.189 ±  17.258  ns/op
+FFTBenchmark.Complex128SIMDBlockedLoop032  avgt    5    578.941 ±   9.000  ns/op
+FFTBenchmark.Complex128SIMDBlockedLoop064  avgt    5    573.697 ±  14.098  ns/op
+FFTBenchmark.Complex128SIMDBlockedLoop128  avgt    5    694.105 ±   8.013  ns/op
+FFTBenchmark.Complex128SIMDLoop004         avgt    5   5825.637 ±  39.295  ns/op
+FFTBenchmark.Complex128SIMDLoop008         avgt    5   2716.007 ±  42.947  ns/op
+FFTBenchmark.Complex128SIMDLoop016         avgt    5   2715.406 ±  51.095  ns/op
+FFTBenchmark.Complex128SIMDLoop032         avgt    5    600.739 ±   5.197  ns/op
+FFTBenchmark.Complex128SIMDLoop064         avgt    5    600.763 ±  12.977  ns/op
+FFTBenchmark.Complex128SIMDLoop128         avgt    5    693.010 ±  11.591  ns/op
+FFTBenchmark.Complex256                    avgt    5   1332.764 ±  25.884  ns/op
+FFTBenchmark.Complex256Blocked             avgt    5   1329.437 ±  20.028  ns/op
+FFTBenchmark.Complex256SIMD                avgt    5  21540.309 ± 368.521  ns/op
+FFTBenchmark.Complex256SIMDBlocked         avgt    5   1073.205 ±   7.450  ns/op
 
-Benchmark                                     Mode  Cnt     Score     Error  Units
-FFTBenchmark.Complex128                       avgt    5   613.369 ±   6.750  ns/op
-FFTBenchmark.Complex128SIMD                   avgt    5  1047.292 ±  29.373  ns/op
-FFTBenchmark.Complex256                       avgt    5  1219.510 ±  11.456  ns/op
-FFTBenchmark.Complex256SIMD                   avgt    5  3277.008 ±  41.803  ns/op
-FFTBenchmark.Complex32                        avgt    5   155.175 ±   3.067  ns/op
-FFTBenchmark.Complex32SIMD                    avgt    5   242.003 ±   3.988  ns/op
-FFTBenchmark.Complex64                        avgt    5   296.431 ±   7.403  ns/op
-FFTBenchmark.Complex64SIMD                    avgt    5   785.439 ±  16.464  ns/op
-FFTBenchmark.Pass2DoubleVectorFFT             avgt    5   622.615 ±  11.708  ns/op
-FFTBenchmark.Pass2DoubleVectorFFTSIMD         avgt    5  7614.190 ± 280.291  ns/op
-FFTBenchmark.Pass2DoubleVectorFFTSIMDBlocked  avgt    5   375.826 ±   6.293  ns/op
-FFTBenchmark.Pass2FloatVectorFFT              avgt    5   620.122 ±   9.828  ns/op
-FFTBenchmark.Pass2FloatVectorFFTSIMD          avgt    5   389.967 ±   3.213  ns/op
-FFTBenchmark.Pass2FloatVectorFFTSIMDBlocked   avgt    5   363.827 ±   3.265  ns/op
+
 
