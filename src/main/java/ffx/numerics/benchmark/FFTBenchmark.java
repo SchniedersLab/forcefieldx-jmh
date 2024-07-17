@@ -558,7 +558,7 @@ public class FFTBenchmark {
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
-  public void Complex064Blocked16FFT(Complex64Blocked64FFT state, Blackhole blackhole) {
+  public void Complex064Blocked16FFT(Complex64Blocked16FFT state, Blackhole blackhole) {
     int nextFFT = 64 * 2;
     state.complex.setUseSIMD(false);
     state.complex.fft(state.in, 0, 1, nextFFT);
