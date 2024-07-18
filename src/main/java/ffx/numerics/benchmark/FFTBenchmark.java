@@ -71,6 +71,8 @@ public class FFTBenchmark {
   public static final double[] inDouble128 = new double[128 * 2];
   public static final double[] inDouble256 = new double[256 * 2];
 
+  public static final double[] inDouble2D32Interleaved = new double[32 * 32 * 2];
+  public static final double[] inDouble2D32Blocked = new double[32 * 32 * 2];
   public static final double[] inDouble2D64Interleaved = new double[64 * 64 * 2];
   public static final double[] inDouble2D64Blocked = new double[64 * 64 * 2];
 
@@ -166,6 +168,18 @@ public class FFTBenchmark {
   public static class Complex64Interleaved2DFFT {
     Complex2D complex2D = new Complex2D(64, 64, DataLayout2D.INTERLEAVED, 1);
     double[] in = Arrays.copyOf(inDouble2D64Interleaved, inDouble2D64Interleaved.length);
+  }
+
+  @State(Scope.Thread)
+  public static class Complex32Blocked2DFFT {
+    Complex2D complex2D = new Complex2D(32, 32, DataLayout2D.BLOCKED_XY, 32*32);
+    double[] in = Arrays.copyOf(inDouble2D32Blocked, inDouble2D32Blocked.length);
+  }
+
+  @State(Scope.Thread)
+  public static class Complex32Interleaved2DFFT {
+    Complex2D complex2D = new Complex2D(32, 32, DataLayout2D.INTERLEAVED, 1);
+    double[] in = Arrays.copyOf(inDouble2D32Interleaved, inDouble2D32Interleaved.length);
   }
 
   @Benchmark
@@ -534,7 +548,7 @@ public class FFTBenchmark {
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
-  public void Complex64Blocked2DFFTScalar(Complex64Blocked2DFFT state, Blackhole blackhole) {
+  public void Complex032Blocked2DFFTScalar(Complex32Blocked2DFFT state, Blackhole blackhole) {
     state.complex2D.setUseSIMD(false);
     state.complex2D.setPackFFTs(false);
     state.complex2D.fft(state.in, 0);
@@ -547,7 +561,7 @@ public class FFTBenchmark {
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
-  public void Complex64Blocked2DFFTSIMD(Complex64Blocked2DFFT state, Blackhole blackhole) {
+  public void Complex032Blocked2DFFTSIMD(Complex32Blocked2DFFT state, Blackhole blackhole) {
     state.complex2D.setUseSIMD(true);
     state.complex2D.setPackFFTs(false);
     state.complex2D.fft(state.in, 0);
@@ -560,7 +574,7 @@ public class FFTBenchmark {
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
-  public void Complex64Blocked2DFFTSIMDPacked(Complex64Blocked2DFFT state, Blackhole blackhole) {
+  public void Complex032Blocked2DFFTSIMDPacked(Complex32Blocked2DFFT state, Blackhole blackhole) {
     state.complex2D.setUseSIMD(true);
     state.complex2D.setPackFFTs(true);
     state.complex2D.fft(state.in, 0);
@@ -573,7 +587,7 @@ public class FFTBenchmark {
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
-  public void Complex64Interleaved2DFFTScalar(Complex64Interleaved2DFFT state, Blackhole blackhole) {
+  public void Complex032Interleaved2DFFTScalar(Complex32Interleaved2DFFT state, Blackhole blackhole) {
     state.complex2D.setUseSIMD(false);
     state.complex2D.setPackFFTs(false);
     state.complex2D.fft(state.in, 0);
@@ -586,7 +600,7 @@ public class FFTBenchmark {
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
-  public void Complex64Interleaved2DFFTSIMD(Complex64Interleaved2DFFT state, Blackhole blackhole) {
+  public void Complex032Interleaved2DFFTSIMD(Complex32Interleaved2DFFT state, Blackhole blackhole) {
     state.complex2D.setUseSIMD(true);
     state.complex2D.setPackFFTs(false);
     state.complex2D.fft(state.in, 0);
@@ -599,7 +613,85 @@ public class FFTBenchmark {
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
-  public void Complex64Interleaved2DFFTSIMDPacked(Complex64Interleaved2DFFT state, Blackhole blackhole) {
+  public void Complex032Interleaved2DFFTSIMDPacked(Complex32Interleaved2DFFT state, Blackhole blackhole) {
+    state.complex2D.setUseSIMD(true);
+    state.complex2D.setPackFFTs(true);
+    state.complex2D.fft(state.in, 0);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex064Blocked2DFFTScalar(Complex64Blocked2DFFT state, Blackhole blackhole) {
+    state.complex2D.setUseSIMD(false);
+    state.complex2D.setPackFFTs(false);
+    state.complex2D.fft(state.in, 0);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex064Blocked2DFFTSIMD(Complex64Blocked2DFFT state, Blackhole blackhole) {
+    state.complex2D.setUseSIMD(true);
+    state.complex2D.setPackFFTs(false);
+    state.complex2D.fft(state.in, 0);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex064Blocked2DFFTSIMDPacked(Complex64Blocked2DFFT state, Blackhole blackhole) {
+    state.complex2D.setUseSIMD(true);
+    state.complex2D.setPackFFTs(true);
+    state.complex2D.fft(state.in, 0);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex064Interleaved2DFFTScalar(Complex64Interleaved2DFFT state, Blackhole blackhole) {
+    state.complex2D.setUseSIMD(false);
+    state.complex2D.setPackFFTs(false);
+    state.complex2D.fft(state.in, 0);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex064Interleaved2DFFTSIMD(Complex64Interleaved2DFFT state, Blackhole blackhole) {
+    state.complex2D.setUseSIMD(true);
+    state.complex2D.setPackFFTs(false);
+    state.complex2D.fft(state.in, 0);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex064Interleaved2DFFTSIMDPacked(Complex64Interleaved2DFFT state, Blackhole blackhole) {
     state.complex2D.setUseSIMD(true);
     state.complex2D.setPackFFTs(true);
     state.complex2D.fft(state.in, 0);
