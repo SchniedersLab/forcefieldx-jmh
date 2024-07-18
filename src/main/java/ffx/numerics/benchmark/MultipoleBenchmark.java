@@ -324,7 +324,7 @@ public class MultipoleBenchmark {
   @Fork(value = 1, jvmArgsPrepend = {
       "--add-modules=jdk.incubator.vector",
   })
-  public void contractTensorGlobalSIMD(CoulombGlobalStateSIMD state, Blackhole blackhole) {
+  public void contractTensorGlobalSIMDFMA(CoulombGlobalStateSIMD state, Blackhole blackhole) {
     double[] e = state.e;
     double[] t = state.tensor;
     double[] Qi = state.Qi;
@@ -632,7 +632,7 @@ public class MultipoleBenchmark {
   @Fork(value = 1, jvmArgsPrepend = {
       "--add-modules=jdk.incubator.vector",
   })
-  public void coulombTensorGlobalSIMD(CoulombGlobalStateSIMD state, Blackhole blackhole) {
+  public void coulombTensorGlobalSIMDFMA(CoulombGlobalStateSIMD state, Blackhole blackhole) {
     double[] work = state.work;
     double[] r = state.r;
     double[] t = state.tensor;
