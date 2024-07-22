@@ -4,9 +4,11 @@ package ffx.numerics.benchmark;
 import edu.rit.pj.ParallelTeam;
 import ffx.numerics.fft.Complex;
 import ffx.numerics.fft.Complex2D;
+import ffx.numerics.fft.Complex3D;
 import ffx.numerics.fft.Complex3DParallel;
 import ffx.numerics.fft.DataLayout1D;
 import ffx.numerics.fft.DataLayout2D;
+import ffx.numerics.fft.DataLayout3D;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -20,6 +22,7 @@ import org.openjdk.jmh.infra.Blackhole;
 import java.util.Arrays;
 import java.util.Random;
 
+import static java.lang.Math.min;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static org.openjdk.jmh.annotations.Mode.AverageTime;
@@ -66,6 +69,8 @@ public class FFTBenchmark {
    */
   private final static int measurementTime = 1;
 
+  public static int nThreads = min(ParallelTeam.getDefaultThreadCount(), 8);
+  public static ParallelTeam parallelTeam = new ParallelTeam(nThreads);
   public static final double[] inDouble32 = new double[32 * 2];
   public static final double[] inDouble64 = new double[64 * 2];
   public static final double[] inDouble128 = new double[128 * 2];
@@ -75,6 +80,14 @@ public class FFTBenchmark {
   public static final double[] inDouble2D32Blocked = new double[32 * 32 * 2];
   public static final double[] inDouble2D64Interleaved = new double[64 * 64 * 2];
   public static final double[] inDouble2D64Blocked = new double[64 * 64 * 2];
+
+  public static final double[] inDouble3D32Conv = new double[32 * 32 * 32];
+  public static final double[] inDouble3D64Conv = new double[64 * 64 * 64];
+  public static final double[] inDouble3D32Interleaved = new double[32 * 32 * 32 * 2];
+  public static final double[] inDouble3D32Blocked = new double[32 * 32 * 32 * 2];
+  public static final double[] inDouble3D64Interleaved = new double[64 * 64 * 64 * 2];
+  public static final double[] inDouble3D64Blocked = new double[64 * 64 * 64 * 2];
+
 
   // Initialize the input arrays with random values.
   static {
@@ -93,14 +106,38 @@ public class FFTBenchmark {
     }
 
     int index = 0;
+    int index3D = 0;
+    for (int x = 0; x < 32; x++) {
+      for (int y = 0; y < 32; y++) {
+
+        inDouble2D32Blocked[index] = random.nextDouble();
+        inDouble2D32Interleaved[2 * index] = random.nextDouble();
+        index++;
+        for (int z = 0; z < 32; z++) {
+          inDouble3D32Conv[index3D] = random.nextDouble();
+          inDouble3D32Blocked[index3D] = random.nextDouble();
+          inDouble3D32Interleaved[2 * index3D] = random.nextDouble();
+          index3D++;
+        }
+      }
+    }
+
+    index = 0;
+    index3D = 0;
     for (int x = 0; x < 64; x++) {
-      // Blocked
       for (int y = 0; y < 64; y++) {
         inDouble2D64Blocked[index] = random.nextDouble();
         inDouble2D64Interleaved[2 * index] = random.nextDouble();
         index++;
+        for (int z = 0; z < 64; z++) {
+          inDouble3D64Conv[index3D] = random.nextDouble();
+          inDouble3D64Blocked[index3D] = random.nextDouble();
+          inDouble3D64Interleaved[2 * index3D] = random.nextDouble();
+          index3D++;
+        }
       }
     }
+
   }
 
   @State(Scope.Thread)
@@ -117,7 +154,6 @@ public class FFTBenchmark {
 
   @State(Scope.Thread)
   public static class Complex32_3D {
-    public final ParallelTeam parallelTeam = new ParallelTeam();
     public final double[] in = Complex3DParallel.initRandomData(32, parallelTeam);
     Complex3DParallel complex3DParallel = new Complex3DParallel(32, 32, 32, parallelTeam);
   }
@@ -160,7 +196,7 @@ public class FFTBenchmark {
 
   @State(Scope.Thread)
   public static class Complex64Blocked2DFFT {
-    Complex2D complex2D = new Complex2D(64, 64, DataLayout2D.BLOCKED_XY, 64*64);
+    Complex2D complex2D = new Complex2D(64, 64, DataLayout2D.BLOCKED_XY, 64 * 64);
     double[] in = Arrays.copyOf(inDouble2D64Blocked, inDouble2D64Blocked.length);
   }
 
@@ -172,7 +208,7 @@ public class FFTBenchmark {
 
   @State(Scope.Thread)
   public static class Complex32Blocked2DFFT {
-    Complex2D complex2D = new Complex2D(32, 32, DataLayout2D.BLOCKED_XY, 32*32);
+    Complex2D complex2D = new Complex2D(32, 32, DataLayout2D.BLOCKED_XY, 32 * 32);
     double[] in = Arrays.copyOf(inDouble2D32Blocked, inDouble2D32Blocked.length);
   }
 
@@ -180,6 +216,46 @@ public class FFTBenchmark {
   public static class Complex32Interleaved2DFFT {
     Complex2D complex2D = new Complex2D(32, 32, DataLayout2D.INTERLEAVED, 1);
     double[] in = Arrays.copyOf(inDouble2D32Interleaved, inDouble2D32Interleaved.length);
+  }
+
+  @State(Scope.Thread)
+  public static class Complex64Blocked3DFFT {
+    Complex3D complex3D = new Complex3D(64, 64, 64, DataLayout3D.BLOCKED_XY);
+    double[] in = Arrays.copyOf(inDouble3D64Blocked, inDouble3D64Blocked.length);
+
+    {
+      complex3D.setRecip(inDouble3D64Conv);
+    }
+  }
+
+  @State(Scope.Thread)
+  public static class Complex64Interleaved3DFFT {
+    Complex3D complex3D = new Complex3D(64, 64, 64, DataLayout3D.INTERLEAVED);
+    double[] in = Arrays.copyOf(inDouble3D64Interleaved, inDouble3D64Interleaved.length);
+
+    {
+      complex3D.setRecip(inDouble3D64Conv);
+    }
+  }
+
+  @State(Scope.Thread)
+  public static class Complex32Blocked3DFFT {
+    Complex3D complex3D = new Complex3D(32, 32, 32, DataLayout3D.BLOCKED_XY);
+    double[] in = Arrays.copyOf(inDouble3D32Blocked, inDouble3D32Blocked.length);
+
+    {
+      complex3D.setRecip(inDouble3D32Conv);
+    }
+  }
+
+  @State(Scope.Thread)
+  public static class Complex32Interleaved3DFFT {
+    Complex3D complex3D = new Complex3D(32, 32, 32, DataLayout3D.INTERLEAVED);
+    double[] in = Arrays.copyOf(inDouble3D32Interleaved, inDouble3D32Interleaved.length);
+
+    {
+      complex3D.setRecip(inDouble3D32Conv);
+    }
   }
 
   @Benchmark
@@ -626,6 +702,84 @@ public class FFTBenchmark {
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex032Blocked3DConvScalar(Complex32Blocked3DFFT state, Blackhole blackhole) {
+    state.complex3D.setUseSIMD(false);
+    state.complex3D.setPackFFTs(false);
+    state.complex3D.convolution(state.in);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex032Blocked3DConvSIMD(Complex32Blocked3DFFT state, Blackhole blackhole) {
+    state.complex3D.setUseSIMD(true);
+    state.complex3D.setPackFFTs(false);
+    state.complex3D.convolution(state.in);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex032Blocked3DConvSIMDPacked(Complex32Blocked3DFFT state, Blackhole blackhole) {
+    state.complex3D.setUseSIMD(true);
+    state.complex3D.setPackFFTs(true);
+    state.complex3D.fft(state.in);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex032Interleaved3DConvScalar(Complex32Interleaved3DFFT state, Blackhole blackhole) {
+    state.complex3D.setUseSIMD(false);
+    state.complex3D.setPackFFTs(false);
+    state.complex3D.convolution(state.in);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex032Interleaved3DConvSIMD(Complex32Interleaved3DFFT state, Blackhole blackhole) {
+    state.complex3D.setUseSIMD(true);
+    state.complex3D.setPackFFTs(false);
+    state.complex3D.convolution(state.in);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex032Interleaved3DConvSIMDPacked(Complex32Interleaved3DFFT state, Blackhole blackhole) {
+    state.complex3D.setUseSIMD(true);
+    state.complex3D.setPackFFTs(true);
+    state.complex3D.convolution(state.in);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
   public void Complex064Blocked2DFFTScalar(Complex64Blocked2DFFT state, Blackhole blackhole) {
     state.complex2D.setUseSIMD(false);
     state.complex2D.setPackFFTs(false);
@@ -697,6 +851,85 @@ public class FFTBenchmark {
     state.complex2D.fft(state.in, 0);
     blackhole.consume(state.in);
   }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex064Blocked3DConvScalar(Complex64Blocked3DFFT state, Blackhole blackhole) {
+    state.complex3D.setUseSIMD(false);
+    state.complex3D.setPackFFTs(false);
+    state.complex3D.convolution(state.in);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex064Blocked3DConvSIMD(Complex64Blocked3DFFT state, Blackhole blackhole) {
+    state.complex3D.setUseSIMD(true);
+    state.complex3D.setPackFFTs(false);
+    state.complex3D.convolution(state.in);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex064Blocked3DConvSIMDPacked(Complex64Blocked3DFFT state, Blackhole blackhole) {
+    state.complex3D.setUseSIMD(true);
+    state.complex3D.setPackFFTs(true);
+    state.complex3D.convolution(state.in);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex064Interleaved3DConvScalar(Complex64Interleaved3DFFT state, Blackhole blackhole) {
+    state.complex3D.setUseSIMD(false);
+    state.complex3D.setPackFFTs(false);
+    state.complex3D.convolution(state.in);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex064Interleaved3DConvSIMD(Complex64Interleaved3DFFT state, Blackhole blackhole) {
+    state.complex3D.setUseSIMD(true);
+    state.complex3D.setPackFFTs(false);
+    state.complex3D.convolution(state.in);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex064Interleaved3DConvSIMDPacked(Complex64Interleaved3DFFT state, Blackhole blackhole) {
+    state.complex3D.setUseSIMD(true);
+    state.complex3D.setPackFFTs(true);
+    state.complex3D.convolution(state.in);
+    blackhole.consume(state.in);
+  }
+
 }
 
 
