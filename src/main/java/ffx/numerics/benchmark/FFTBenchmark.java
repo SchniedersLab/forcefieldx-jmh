@@ -251,6 +251,23 @@ public class FFTBenchmark {
     }
   }
 
+  @State(Scope.Thread)
+  public static class Complex32Blocked3DFFTParallel {
+    Complex3DParallel complex3DParallel = new Complex3DParallel(32, 32, 32, parallelTeam, DataLayout3D.BLOCKED_XY);
+    double[] in = Arrays.copyOf(inDouble3D32Blocked, inDouble3D32Blocked.length);
+    {
+      complex3DParallel.setRecip(inDouble3D32Conv);
+    }
+  }
+
+  @State(Scope.Thread)
+  public static class Complex64Blocked3DFFTParallel {
+    Complex3DParallel complex3DParallel = new Complex3DParallel(64, 64, 64, parallelTeam, DataLayout3D.BLOCKED_XY);
+    double[] in = Arrays.copyOf(inDouble3D64Blocked, inDouble3D64Blocked.length);
+    {
+      complex3DParallel.setRecip(inDouble3D64Conv);
+    }
+  }
 
   @Benchmark
   @BenchmarkMode(AverageTime)
@@ -299,7 +316,7 @@ public class FFTBenchmark {
     state.complex.fft(state.in, 0, 1);
     blackhole.consume(state.in);
   }
-  
+
   @Benchmark
   @BenchmarkMode(AverageTime)
   @OutputTimeUnit(NANOSECONDS)
@@ -396,6 +413,7 @@ public class FFTBenchmark {
     state.complex.fft(state.in, 0, 1);
     blackhole.consume(state.in);
   }
+
   @Benchmark
   @BenchmarkMode(AverageTime)
   @OutputTimeUnit(NANOSECONDS)
@@ -524,7 +542,7 @@ public class FFTBenchmark {
 
   @Benchmark
   @BenchmarkMode(AverageTime)
-  @OutputTimeUnit(NANOSECONDS)
+  @OutputTimeUnit(MICROSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
@@ -537,7 +555,7 @@ public class FFTBenchmark {
 
   @Benchmark
   @BenchmarkMode(AverageTime)
-  @OutputTimeUnit(NANOSECONDS)
+  @OutputTimeUnit(MICROSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
@@ -550,7 +568,7 @@ public class FFTBenchmark {
 
   @Benchmark
   @BenchmarkMode(AverageTime)
-  @OutputTimeUnit(NANOSECONDS)
+  @OutputTimeUnit(MICROSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
@@ -563,7 +581,20 @@ public class FFTBenchmark {
 
   @Benchmark
   @BenchmarkMode(AverageTime)
-  @OutputTimeUnit(NANOSECONDS)
+  @OutputTimeUnit(MICROSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex032Blocked3DConvSIMDPackedParallel(Complex32Blocked3DFFTParallel state, Blackhole blackhole) {
+    state.complex3DParallel.setUseSIMD(true);
+    state.complex3DParallel.setPackFFTs(true);
+    state.complex3DParallel.fft(state.in);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(MICROSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
@@ -576,7 +607,7 @@ public class FFTBenchmark {
 
   @Benchmark
   @BenchmarkMode(AverageTime)
-  @OutputTimeUnit(NANOSECONDS)
+  @OutputTimeUnit(MICROSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
@@ -589,7 +620,7 @@ public class FFTBenchmark {
 
   @Benchmark
   @BenchmarkMode(AverageTime)
-  @OutputTimeUnit(NANOSECONDS)
+  @OutputTimeUnit(MICROSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
@@ -680,7 +711,7 @@ public class FFTBenchmark {
 
   @Benchmark
   @BenchmarkMode(AverageTime)
-  @OutputTimeUnit(NANOSECONDS)
+  @OutputTimeUnit(MICROSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
@@ -693,7 +724,7 @@ public class FFTBenchmark {
 
   @Benchmark
   @BenchmarkMode(AverageTime)
-  @OutputTimeUnit(NANOSECONDS)
+  @OutputTimeUnit(MICROSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
@@ -706,7 +737,7 @@ public class FFTBenchmark {
 
   @Benchmark
   @BenchmarkMode(AverageTime)
-  @OutputTimeUnit(NANOSECONDS)
+  @OutputTimeUnit(MICROSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
@@ -719,7 +750,20 @@ public class FFTBenchmark {
 
   @Benchmark
   @BenchmarkMode(AverageTime)
-  @OutputTimeUnit(NANOSECONDS)
+  @OutputTimeUnit(MICROSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex064Blocked3DConvSIMDPackedParallel(Complex64Blocked3DFFTParallel state, Blackhole blackhole) {
+    state.complex3DParallel.setUseSIMD(true);
+    state.complex3DParallel.setPackFFTs(true);
+    state.complex3DParallel.convolution(state.in);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(MICROSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
@@ -732,7 +776,7 @@ public class FFTBenchmark {
 
   @Benchmark
   @BenchmarkMode(AverageTime)
-  @OutputTimeUnit(NANOSECONDS)
+  @OutputTimeUnit(MICROSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
@@ -745,7 +789,7 @@ public class FFTBenchmark {
 
   @Benchmark
   @BenchmarkMode(AverageTime)
-  @OutputTimeUnit(NANOSECONDS)
+  @OutputTimeUnit(MICROSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
