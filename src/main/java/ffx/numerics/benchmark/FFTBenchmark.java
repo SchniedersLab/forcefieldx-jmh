@@ -210,12 +210,32 @@ public class FFTBenchmark {
   }
 
   @State(Scope.Thread)
+  public static class Complex32Blocked3DFFTParallel {
+    Complex3DParallel complex3DParallel = new Complex3DParallel(32, 32, 32, parallelTeam, DataLayout3D.BLOCKED_XY);
+    double[] in = Arrays.copyOf(inDouble3D32Blocked, inDouble3D32Blocked.length);
+
+    {
+      complex3DParallel.setRecip(inDouble3D32Conv);
+    }
+  }
+
+  @State(Scope.Thread)
   public static class Complex32Interleaved3DFFT {
     Complex3D complex3D = new Complex3D(32, 32, 32, DataLayout3D.INTERLEAVED);
     double[] in = Arrays.copyOf(inDouble3D32Interleaved, inDouble3D32Interleaved.length);
 
     {
       complex3D.setRecip(inDouble3D32Conv);
+    }
+  }
+
+  @State(Scope.Thread)
+  public static class Complex32Interleaved3DFFTParallel {
+    Complex3DParallel complex3DParallel = new Complex3DParallel(32, 32, 32, parallelTeam, DataLayout3D.INTERLEAVED);
+    double[] in = Arrays.copyOf(inDouble3D32Interleaved, inDouble3D32Interleaved.length);
+
+    {
+      complex3DParallel.setRecip(inDouble3D32Conv);
     }
   }
 
@@ -242,6 +262,16 @@ public class FFTBenchmark {
   }
 
   @State(Scope.Thread)
+  public static class Complex64Blocked3DFFTParallel {
+    Complex3DParallel complex3DParallel = new Complex3DParallel(64, 64, 64, parallelTeam, DataLayout3D.BLOCKED_XY);
+    double[] in = Arrays.copyOf(inDouble3D64Blocked, inDouble3D64Blocked.length);
+
+    {
+      complex3DParallel.setRecip(inDouble3D64Conv);
+    }
+  }
+
+  @State(Scope.Thread)
   public static class Complex64Interleaved3DFFT {
     Complex3D complex3D = new Complex3D(64, 64, 64, DataLayout3D.INTERLEAVED);
     double[] in = Arrays.copyOf(inDouble3D64Interleaved, inDouble3D64Interleaved.length);
@@ -252,22 +282,15 @@ public class FFTBenchmark {
   }
 
   @State(Scope.Thread)
-  public static class Complex32Blocked3DFFTParallel {
-    Complex3DParallel complex3DParallel = new Complex3DParallel(32, 32, 32, parallelTeam, DataLayout3D.BLOCKED_XY);
-    double[] in = Arrays.copyOf(inDouble3D32Blocked, inDouble3D32Blocked.length);
-    {
-      complex3DParallel.setRecip(inDouble3D32Conv);
-    }
-  }
+  public static class Complex64Interleaved3DFFTParallel {
+    Complex3DParallel complex3DParallel = new Complex3DParallel(64, 64, 64, parallelTeam, DataLayout3D.INTERLEAVED);
+    double[] in = Arrays.copyOf(inDouble3D64Interleaved, inDouble3D64Interleaved.length);
 
-  @State(Scope.Thread)
-  public static class Complex64Blocked3DFFTParallel {
-    Complex3DParallel complex3DParallel = new Complex3DParallel(64, 64, 64, parallelTeam, DataLayout3D.BLOCKED_XY);
-    double[] in = Arrays.copyOf(inDouble3D64Blocked, inDouble3D64Blocked.length);
     {
       complex3DParallel.setRecip(inDouble3D64Conv);
     }
   }
+
 
   @Benchmark
   @BenchmarkMode(AverageTime)
@@ -633,6 +656,19 @@ public class FFTBenchmark {
 
   @Benchmark
   @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(MICROSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex032Interleaved3DConvSIMDPackedParallel(Complex32Interleaved3DFFTParallel state, Blackhole blackhole) {
+    state.complex3DParallel.setUseSIMD(true);
+    state.complex3DParallel.setPackFFTs(true);
+    state.complex3DParallel.convolution(state.in);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
   @OutputTimeUnit(NANOSECONDS)
   @Warmup(iterations = warmUpIterations, time = warmupTime)
   @Measurement(iterations = measurementIterations, time = measurementTime)
@@ -800,6 +836,18 @@ public class FFTBenchmark {
     blackhole.consume(state.in);
   }
 
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(MICROSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void Complex064Interleaved3DConvSIMDPackedParallel(Complex64Interleaved3DFFTParallel state, Blackhole blackhole) {
+    state.complex3DParallel.setUseSIMD(true);
+    state.complex3DParallel.setPackFFTs(true);
+    state.complex3DParallel.convolution(state.in);
+    blackhole.consume(state.in);
+  }
 }
 
 
