@@ -32,12 +32,12 @@
         <!--
             JMH version to use with this project.
           -->
-        <jmh.version>1.35</jmh.version>
+        <jmh.version>1.37</jmh.version>
 
         <!--
             Java source/target to use for compilation.
           -->
-        <javac.target>21</javac.target>
+        <javac.target>24</javac.target>
 
         <!--
             Name of the benchmark Uber-JAR to generate.
@@ -60,6 +60,13 @@
                          <arg>--add-modules</arg>
                          <arg>jdk.incubator.vector</arg>
                     </compilerArgs>
+                    <annotationProcessorPaths>
+                      <path>
+                          <groupId>org.openjdk.jmh</groupId>
+                            <artifactId>jmh-generator-annprocess</artifactId>
+                            <version>${jmh.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
             <plugin>
