@@ -37,7 +37,7 @@
         <!--
             Java source/target to use for compilation.
           -->
-        <javac.target>24</javac.target>
+        <javac.target>21</javac.target>
 
         <!--
             Name of the benchmark Uber-JAR to generate.
