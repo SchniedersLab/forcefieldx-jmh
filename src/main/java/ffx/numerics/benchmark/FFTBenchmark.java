@@ -69,7 +69,8 @@ public class FFTBenchmark {
    */
   private final static int measurementTime = 1;
 
-  public static int nThreads = min(ParallelTeam.getDefaultThreadCount(), 8);
+  public static int requestedThreads = Integer.parseInt(System.getProperty("pj.nt", "8"));
+  public static int nThreads = min(ParallelTeam.getDefaultThreadCount(), requestedThreads);
   public static ParallelTeam parallelTeam = new ParallelTeam(nThreads);
   public static final double[] inDouble64 = new double[64 * 2];
   public static final double[] inDouble128 = new double[128 * 2];
