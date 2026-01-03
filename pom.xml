@@ -4,7 +4,7 @@
 
     <groupId>edu.uiowa.eng.ffx</groupId>
     <artifactId>ffx-jmh</artifactId>
-    <version>1.0.0</version>
+    <version>26.0.0</version>
     <packaging>jar</packaging>
     <name>Force Field X JMH</name>
     <dependencies>
@@ -22,7 +22,7 @@
         <dependency>
             <groupId>edu.uiowa.eng.ffx</groupId>
             <artifactId>ffx-numerics</artifactId>
-            <version>1.0.0</version>
+            <version>26.0.0</version>
         </dependency>
     </dependencies>
 

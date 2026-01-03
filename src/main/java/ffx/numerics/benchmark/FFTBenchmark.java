@@ -3,6 +3,7 @@ package ffx.numerics.benchmark;
 
 import edu.rit.pj.ParallelTeam;
 import ffx.numerics.fft.Complex;
+import ffx.numerics.fft.Complex1D;
 import ffx.numerics.fft.Complex2D;
 import ffx.numerics.fft.Complex3D;
 import ffx.numerics.fft.Complex3DParallel;
@@ -55,19 +56,19 @@ public class FFTBenchmark {
   /**
    * Perform 2 test warm-up iterations
    */
-  private final static int warmUpIterations = 2;
+  private final static int warmUpIterations = 5;
   /**
    * Each warm-up iteration will run for this many seconds.
    */
-  private final static int warmupTime = 1;
+  private final static int warmupTime = 2;
   /**
    * Perform 3 test measurement iterations
    */
-  private final static int measurementIterations = 5;
+  private final static int measurementIterations = 10;
   /**
    * Each measurement iteration will run for this many seconds.
    */
-  private final static int measurementTime = 1;
+  private final static int measurementTime = 2;
 
   public static int requestedThreads = Integer.parseInt(System.getProperty("pj.nt", "8"));
   public static int nThreads = min(ParallelTeam.getDefaultThreadCount(), requestedThreads);
@@ -204,6 +205,12 @@ public class FFTBenchmark {
   }
 
   @State(Scope.Thread)
+  public static class Complex1D1024Blocked {
+    Complex1D complex = new Complex1D(1024, DataLayout1D.BLOCKED, 1024);
+    double[] in = Arrays.copyOf(inDouble1024, inDouble1024.length);
+  }
+
+  @State(Scope.Thread)
   public static class Complex64Blocked2DFFT {
     Complex2D complex2D = new Complex2D(64, 64, DataLayout2D.BLOCKED_XY, 64 * 64);
     double[] in = Arrays.copyOf(inDouble2D64Blocked, inDouble2D64Blocked.length);
@@ -219,7 +226,6 @@ public class FFTBenchmark {
   public static class Complex64Blocked3DFFT {
     Complex3D complex3D = new Complex3D(64, 64, 64, DataLayout3D.BLOCKED_XY);
     double[] in = Arrays.copyOf(inDouble3D64Blocked, inDouble3D64Blocked.length);
-
     {
       complex3D.setRecip(inDouble3D64Conv);
     }
@@ -229,7 +235,6 @@ public class FFTBenchmark {
   public static class Complex64Blocked3DFFTParallel {
     Complex3DParallel complex3DParallel = new Complex3DParallel(64, 64, 64, parallelTeam, DataLayout3D.BLOCKED_XY);
     double[] in = Arrays.copyOf(inDouble3D64Blocked, inDouble3D64Blocked.length);
-
     {
       complex3DParallel.setRecip(inDouble3D64Conv);
     }
@@ -239,7 +244,6 @@ public class FFTBenchmark {
   public static class Complex64Interleaved3DFFT {
     Complex3D complex3D = new Complex3D(64, 64, 64, DataLayout3D.INTERLEAVED);
     double[] in = Arrays.copyOf(inDouble3D64Interleaved, inDouble3D64Interleaved.length);
-
     {
       complex3D.setRecip(inDouble3D64Conv);
     }
@@ -249,7 +253,6 @@ public class FFTBenchmark {
   public static class Complex64Interleaved3DFFTParallel {
     Complex3DParallel complex3DParallel = new Complex3DParallel(64, 64, 64, parallelTeam, DataLayout3D.INTERLEAVED);
     double[] in = Arrays.copyOf(inDouble3D64Interleaved, inDouble3D64Interleaved.length);
-
     {
       complex3DParallel.setRecip(inDouble3D64Conv);
     }
@@ -271,7 +274,6 @@ public class FFTBenchmark {
   public static class Complex128Blocked3DFFT {
     Complex3D complex3D = new Complex3D(128, 128, 128, DataLayout3D.BLOCKED_XY);
     double[] in = Arrays.copyOf(inDouble3D128Blocked, inDouble3D128Blocked.length);
-
     {
       complex3D.setRecip(inDouble3D128Conv);
     }
@@ -281,7 +283,6 @@ public class FFTBenchmark {
   public static class Complex128Blocked3DFFTParallel {
     Complex3DParallel complex3DParallel = new Complex3DParallel(128, 128, 128, parallelTeam, DataLayout3D.BLOCKED_XY);
     double[] in = Arrays.copyOf(inDouble3D128Blocked, inDouble3D128Blocked.length);
-
     {
       complex3DParallel.setRecip(inDouble3D128Conv);
     }
@@ -291,7 +292,6 @@ public class FFTBenchmark {
   public static class Complex128Interleaved3DFFT {
     Complex3D complex3D = new Complex3D(128, 128, 128, DataLayout3D.INTERLEAVED);
     double[] in = Arrays.copyOf(inDouble3D128Interleaved, inDouble3D128Interleaved.length);
-
     {
       complex3D.setRecip(inDouble3D128Conv);
     }
@@ -301,7 +301,6 @@ public class FFTBenchmark {
   public static class Complex128Interleaved3DFFTParallel {
     Complex3DParallel complex3DParallel = new Complex3DParallel(128, 128, 128, parallelTeam, DataLayout3D.INTERLEAVED);
     double[] in = Arrays.copyOf(inDouble3D128Interleaved, inDouble3D128Interleaved.length);
-
     {
       complex3DParallel.setRecip(inDouble3D128Conv);
     }
@@ -544,6 +543,17 @@ public class FFTBenchmark {
   @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
   public void T1DComplex1024BlockedSIMD(Complex1024Blocked state, Blackhole blackhole) {
     state.complex.setUseSIMD(true);
+    state.complex.fft(state.in, 0, 1);
+    blackhole.consume(state.in);
+  }
+
+  @Benchmark
+  @BenchmarkMode(AverageTime)
+  @OutputTimeUnit(NANOSECONDS)
+  @Warmup(iterations = warmUpIterations, time = warmupTime)
+  @Measurement(iterations = measurementIterations, time = measurementTime)
+  @Fork(value = 1, jvmArgsPrepend = {"--add-modules=jdk.incubator.vector"})
+  public void T1DComplex1024as2D(Complex1D1024Blocked state, Blackhole blackhole) {
     state.complex.fft(state.in, 0, 1);
     blackhole.consume(state.in);
   }
